@@ -46,6 +46,7 @@ export interface SimulationSnapshot {
   initialVoxelCount: number;
   targetVoxelCount: number;
   currentBlockId?: string;
+  activeJointId?: JointId;
   metrics: ProgramMetrics;
   scoreResult?: ScoreResult;
   logs: readonly SimulationLogEntry[];
@@ -383,6 +384,7 @@ export class SimulationEngine {
   }
 
   private createSnapshot(): SimulationSnapshot {
+    const currentCommand = this.executor.getCurrentCommand();
     return {
       status: this.status,
       jointAngles: this.robotController.getAngles(),
@@ -390,7 +392,11 @@ export class SimulationEngine {
       hairVoxels: this.hairVoxels,
       initialVoxelCount: this.challenge.initialHair.voxels.size,
       targetVoxelCount: this.challenge.targetHair.voxels.size,
-      currentBlockId: this.executor.getCurrentCommand()?.sourceBlockId,
+      currentBlockId: currentCommand?.sourceBlockId,
+      activeJointId:
+        currentCommand?.type === 'set-joint-angle'
+          ? currentCommand.jointId
+          : undefined,
       metrics: { ...this.metrics },
       scoreResult: this.scoreResult
         ? { ...this.scoreResult }

@@ -118,12 +118,12 @@ tests/
 
 ### Phase 5 — R3F 场景
 
-- [ ] 创建 Canvas、相机、灯光、地面和 OrbitControls。
-- [ ] 使用嵌套 Group 渲染程序化四关节机械臂。
-- [ ] 使用当前 Hair Set 渲染可删除 voxel。
-- [ ] 渲染不可剪头部、末端工具和可切换 Target Ghost。
-- [ ] 在 `useFrame` 中推进引擎并更新高频 refs。
-- [ ] 增加 WebGL 不可用的降级错误界面。
+- [x] 创建 Canvas、相机、灯光、地面和 OrbitControls。
+- [x] 使用嵌套 Group 渲染程序化四关节机械臂。
+- [x] 使用当前 Hair Set 渲染可删除 voxel。
+- [x] 渲染不可剪头部、末端工具和可切换 Target Ghost。
+- [x] 在 `useFrame` 中推进引擎并更新高频 refs。
+- [x] 增加 WebGL 不可用的降级错误界面。
 
 阶段出口：机械臂动画、Hair 删除和目标预览与引擎状态一致，3D 组件不包含业务评分。
 
