@@ -34,7 +34,7 @@ describe('default hairstyle generator', () => {
     const second = generateDefaultHairstyles();
 
     expect(first).toEqual(second);
-    expect(first.targetHair.voxels).toHaveLength(197);
+    expect(first.targetHair.voxels).toHaveLength(215);
     expect(first.initialHair.voxels).toHaveLength(241);
     expect(hasDuplicateVoxels(first.targetHair.voxels)).toBe(false);
     expect(hasDuplicateVoxels(first.initialHair.voxels)).toBe(false);

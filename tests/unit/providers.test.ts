@@ -17,7 +17,7 @@ describe('LocalChallengeProvider', () => {
 
     expect(summaries).toHaveLength(1);
     expect(first.initialHair.voxels).toBeInstanceOf(Set);
-    expect(first.targetHair.voxels.size).toBe(197);
+    expect(first.targetHair.voxels.size).toBe(215);
     expect(first.initialHair.voxels).not.toBe(second.initialHair.voxels);
   });
 

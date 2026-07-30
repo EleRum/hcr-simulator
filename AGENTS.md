@@ -2,7 +2,7 @@
 
 ## 当前阶段
 
-仓库已获得用户明确授权，正在按 `docs/IMPLEMENTATION_PLAN.md` 实施 Phase 1–6。
+仓库已按用户明确授权完成 `docs/IMPLEMENTATION_PLAN.md` 的 Phase 1–6。Phase 7 的跨浏览器人工视觉验收与任何部署工作尚未获得本轮授权。
 
 - 每个 Phase 开始前重读实施计划与相关规格；
 - 每个 Phase 只实现该阶段范围，完成验证后独立 commit；

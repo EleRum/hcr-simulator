@@ -2,7 +2,6 @@ import type { HairstyleDefinition, VoxelCoord } from '../../types/domain';
 import { coordToKey } from './voxelKey';
 
 const TARGET_INNER_BOUND = 0.68;
-const TARGET_OUTER_BOUND = 1.18;
 const INITIAL_OUTER_BOUND = 1.24;
 
 export interface GeneratedHairstyles {
@@ -11,8 +10,8 @@ export interface GeneratedHairstyles {
 }
 
 export function generateDefaultHairstyles(): GeneratedHairstyles {
-  const target = generateShell(TARGET_INNER_BOUND, TARGET_OUTER_BOUND, -1);
   const initial = generateShell(TARGET_INNER_BOUND, INITIAL_OUTER_BOUND, -2);
+  const target = initial.filter((voxel) => !isTrimBandVoxel(voxel));
 
   return {
     initialHair: {
@@ -26,6 +25,32 @@ export function generateDefaultHairstyles(): GeneratedHairstyles {
       voxels: target,
     },
   };
+}
+
+function isTrimBandVoxel(voxel: VoxelCoord): boolean {
+  const absoluteZ = Math.abs(voxel.z);
+  if (voxel.x === 0 && (voxel.y === 1 || voxel.y === 2)) {
+    return absoluteZ === 4;
+  }
+  if (voxel.x === 1 && voxel.y === 1) {
+    return absoluteZ === 4;
+  }
+  if (voxel.x === 1 && voxel.y === 2) {
+    return absoluteZ === 3 || absoluteZ === 4;
+  }
+  if (voxel.x === 2 && voxel.y === 1) {
+    return absoluteZ === 3 || absoluteZ === 4;
+  }
+  if (voxel.x === 2 && voxel.y === 2) {
+    return absoluteZ === 3;
+  }
+  if (voxel.x === 3 && voxel.y === 1) {
+    return absoluteZ === 2 || absoluteZ === 3;
+  }
+  if (voxel.x === 3 && voxel.y === 2) {
+    return absoluteZ >= 1 && absoluteZ <= 3;
+  }
+  return false;
 }
 
 function generateShell(

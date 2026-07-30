@@ -158,6 +158,10 @@ describe('SimulationEngine', () => {
       0,
     );
     expect(score?.finalScore).toBeTypeOf('number');
+    expect(engine.getSnapshot().hairVoxels.size).toBeLessThan(
+      defaultChallenge.initialHair.voxels.size,
+    );
+    expect(score?.completionScore).toBeGreaterThanOrEqual(80);
 
     workspace.dispose();
   });

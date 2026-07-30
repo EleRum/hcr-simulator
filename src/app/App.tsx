@@ -1,5 +1,10 @@
-import { PhaseFivePreview } from './PhaseFivePreview';
+import { AppProviders } from './providers';
+import { WorkbenchBootstrap } from './WorkbenchBootstrap';
 
 export function App() {
-  return <PhaseFivePreview />;
+  return (
+    <AppProviders>
+      <WorkbenchBootstrap />
+    </AppProviders>
+  );
 }

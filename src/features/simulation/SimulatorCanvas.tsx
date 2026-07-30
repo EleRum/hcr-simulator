@@ -31,7 +31,7 @@ export function SimulatorCanvas({
       aria-label="HCR 三维仿真场景"
     >
       <Canvas
-        shadows
+        shadows="basic"
         dpr={[1, 1.5]}
         camera={{
           position: [3.8, 3.1, 4.8],
