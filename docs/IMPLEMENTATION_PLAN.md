@@ -106,13 +106,13 @@ tests/
 
 ### Phase 4 — 机械臂、仿真和碰撞
 
-- [ ] 实现纯正向运动学函数和已知姿态测试。
-- [ ] 实现 RobotController 的当前角度、目标角度和线性推进。
-- [ ] 实现 Sphere Sweep / Voxel AABB 连续接触检测。
-- [ ] 实现 Program Executor 与 SimulationEngine 状态机。
-- [ ] 实现 Run、Pause、Resume、Step、Stop、Reset 和完成回调。
-- [ ] 实现 Hair Set 删除、指标累积、日志上限和评分触发。
-- [ ] 覆盖帧率无关碰撞、暂停冻结、单步边界和 Reset 单测。
+- [x] 实现纯正向运动学函数和已知姿态测试。
+- [x] 实现 RobotController 的当前角度、目标角度和线性推进。
+- [x] 实现 Sphere Sweep / Voxel AABB 连续接触检测。
+- [x] 实现 Program Executor 与 SimulationEngine 状态机。
+- [x] 实现 Run、Pause、Resume、Step、Stop、Reset 和完成回调。
+- [x] 实现 Hair Set 删除、指标累积、日志上限和评分触发。
+- [x] 覆盖帧率无关碰撞、暂停冻结、单步边界和 Reset 单测。
 
 阶段出口：无 UI 时可用注入 delta 的测试完整运行程序，并得到命中集合和 ScoreResult。
 
