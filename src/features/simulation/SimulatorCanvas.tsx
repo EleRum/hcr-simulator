@@ -1,7 +1,16 @@
-import { Canvas } from '@react-three/fiber';
-import { ContactShadows, OrbitControls } from '@react-three/drei';
+import {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+} from 'react';
+import { Canvas, useThree } from '@react-three/fiber';
+import { OrbitControls } from '@react-three/drei';
+import { AlertTriangle, LoaderCircle, RotateCcw } from 'lucide-react';
+import type { WebGLRenderer } from 'three';
 import type { SimulationEngine } from './SimulationEngine';
 import { useSimulationSnapshot } from './useSimulationSnapshot';
+import { SimulationTicker } from './SimulationTicker';
 import { RobotModel } from '../robot/RobotModel';
 import { VoxelHair } from '../voxel/VoxelHair';
 import { supportsWebGL } from './webglSupport';
@@ -11,11 +20,50 @@ interface SimulatorCanvasProps {
   showTarget: boolean;
 }
 
+export type SceneRenderState =
+  | 'ready'
+  | 'context-lost'
+  | 'recovering';
+
 export function SimulatorCanvas({
   engine,
   showTarget,
 }: SimulatorCanvasProps) {
-  if (!supportsWebGL()) {
+  const [webglSupported] = useState(supportsWebGL);
+  const [renderState, setRenderState] =
+    useState<SceneRenderState>('recovering');
+  const [canvasGeneration, setCanvasGeneration] = useState(0);
+  const resumeAfterRecoveryRef = useRef(false);
+
+  const reinitializeCanvas = useCallback(() => {
+    setRenderState('recovering');
+    setCanvasGeneration((generation) => generation + 1);
+  }, []);
+
+  const handleContextLost = useCallback(() => {
+    if (engine.getSnapshot().status === 'running') {
+      resumeAfterRecoveryRef.current = true;
+      engine.pause();
+    } else {
+      resumeAfterRecoveryRef.current = false;
+    }
+    setRenderState('context-lost');
+  }, [engine]);
+
+  const handleCanvasCreated = useCallback(
+    (gl: WebGLRenderer) => {
+      gl.setClearColor('#0a141d', 1);
+      setRenderState('ready');
+
+      if (resumeAfterRecoveryRef.current) {
+        resumeAfterRecoveryRef.current = false;
+        engine.resume();
+      }
+    },
+    [engine],
+  );
+
+  if (!webglSupported) {
     return (
       <div className="webgl-fallback" role="alert">
         <strong>无法启动 3D 场景</strong>
@@ -28,21 +76,56 @@ export function SimulatorCanvas({
     <div
       className="simulator-canvas"
       data-testid="simulator-canvas"
+      data-render-state={renderState}
       aria-label="HCR 三维仿真场景"
     >
       <Canvas
+        key={canvasGeneration}
         shadows="basic"
-        dpr={[1, 1.5]}
+        dpr={[1, 1.25]}
         camera={{
           position: [3.8, 3.1, 4.8],
           fov: 42,
           near: 0.1,
           far: 50,
         }}
-        gl={{ antialias: true, alpha: false }}
+        gl={{
+          antialias: true,
+          alpha: false,
+        }}
+        onCreated={({ gl }) => handleCanvasCreated(gl)}
       >
+        <WebGLContextGuard
+          onContextLost={handleContextLost}
+          onContextRestored={reinitializeCanvas}
+        />
         <SimulatorScene engine={engine} showTarget={showTarget} />
       </Canvas>
+      {renderState !== 'ready' ? (
+        <div
+          className="scene-status-overlay"
+          role={renderState === 'context-lost' ? 'alert' : 'status'}
+        >
+          {renderState === 'context-lost' ? (
+            <>
+              <AlertTriangle size={24} />
+              <strong>3D 渲染已中断</strong>
+              <span>
+                WebGL 上下文已丢失，仿真已安全暂停。恢复场景后将自动继续。
+              </span>
+              <button type="button" onClick={reinitializeCanvas}>
+                <RotateCcw size={15} />
+                重新初始化 3D
+              </button>
+            </>
+          ) : (
+            <>
+              <LoaderCircle className="spin" size={22} />
+              <strong>正在初始化 3D 场景</strong>
+            </>
+          )}
+        </div>
+      ) : null}
     </div>
   );
 }
@@ -56,6 +139,7 @@ function SimulatorScene({
 
   return (
     <>
+      <SimulationTicker engine={engine} />
       <color attach="background" args={['#0a141d']} />
       <fog attach="fog" args={['#0a141d', 6, 12]} />
       <ambientLight intensity={0.78} />
@@ -73,7 +157,10 @@ function SimulatorScene({
         shadow-mapSize-height={1024}
       />
 
-      <RobotModel engine={engine} />
+      <RobotModel
+        engine={engine}
+        activeJointId={snapshot.activeJointId}
+      />
       <Head
         center={challenge.voxelConfig.headCenter}
         scale={challenge.voxelConfig.headScale}
@@ -94,13 +181,14 @@ function SimulatorScene({
         args={[12, 48, '#294454', '#172b37']}
         position={[0, 0.002, 0]}
       />
-      <ContactShadows
-        position={[0, 0.006, 0]}
-        opacity={0.34}
-        scale={7}
-        blur={2.4}
-        far={4}
-      />
+      <mesh
+        receiveShadow
+        rotation={[-Math.PI / 2, 0, 0]}
+        position={[0, -0.012, 0]}
+      >
+        <planeGeometry args={[12, 12]} />
+        <meshStandardMaterial color="#0a141d" roughness={1} />
+      </mesh>
       <OrbitControls
         makeDefault
         target={[1.15, 1.25, 0]}
@@ -112,6 +200,38 @@ function SimulatorScene({
       />
     </>
   );
+}
+
+function WebGLContextGuard({
+  onContextLost,
+  onContextRestored,
+}: {
+  onContextLost: () => void;
+  onContextRestored: () => void;
+}) {
+  const gl = useThree((state) => state.gl) as WebGLRenderer;
+
+  useEffect(() => {
+    const canvas = gl.domElement;
+    const handleLost = (event: Event) => {
+      event.preventDefault();
+      onContextLost();
+    };
+    const handleRestored = () => onContextRestored();
+
+    canvas.addEventListener('webglcontextlost', handleLost);
+    canvas.addEventListener('webglcontextrestored', handleRestored);
+
+    return () => {
+      canvas.removeEventListener('webglcontextlost', handleLost);
+      canvas.removeEventListener(
+        'webglcontextrestored',
+        handleRestored,
+      );
+    };
+  }, [gl, onContextLost, onContextRestored]);
+
+  return null;
 }
 
 function Head({

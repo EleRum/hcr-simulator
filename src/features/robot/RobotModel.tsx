@@ -3,10 +3,11 @@ import { useFrame } from '@react-three/fiber';
 import type { Group } from 'three';
 import { MathUtils } from 'three';
 import type { SimulationEngine } from '../simulation/SimulationEngine';
-import { useSimulationSnapshot } from '../simulation/useSimulationSnapshot';
+import type { JointId } from '../../types/domain';
 
 interface RobotModelProps {
   engine: SimulationEngine;
+  activeJointId?: JointId;
 }
 
 const COLORS = {
@@ -17,18 +18,18 @@ const COLORS = {
   tool: '#ef6e5b',
 } as const;
 
-export function RobotModel({ engine }: RobotModelProps) {
+export function RobotModel({
+  engine,
+  activeJointId,
+}: RobotModelProps) {
   const baseYawRef = useRef<Group>(null);
   const shoulderRef = useRef<Group>(null);
   const elbowRef = useRef<Group>(null);
   const wristRef = useRef<Group>(null);
-  const snapshot = useSimulationSnapshot(engine);
   const challenge = engine.getChallenge();
   const geometry = challenge.robotConfig.geometry;
-  const activeJointId = snapshot.activeJointId;
 
-  useFrame((_, deltaSeconds) => {
-    engine.tick(deltaSeconds * 1_000);
+  useFrame(() => {
     const angles = engine.robotController.getAngles();
 
     if (baseYawRef.current) {

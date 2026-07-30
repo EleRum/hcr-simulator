@@ -18,6 +18,10 @@
   --danger: #ef725f;
   --topbar-height: 58px;
   --control-height: 62px;
+  --font-micro: 0.7rem;
+  --font-xs: 0.75rem;
+  --font-sm: 0.8125rem;
+  --font-md: 0.875rem;
 }
 
 * {
@@ -59,7 +63,7 @@ input:focus-visible {
   margin: 0;
   color: var(--cyan);
   font-family: "SFMono-Regular", Consolas, monospace;
-  font-size: 0.66rem;
+  font-size: var(--font-xs);
   font-weight: 700;
   letter-spacing: 0.17em;
 }
@@ -157,7 +161,7 @@ input:focus-visible {
 
 .brand-lockup h1 {
   margin: 0;
-  font-size: 0.94rem;
+  font-size: 1rem;
   font-weight: 740;
   letter-spacing: -0.02em;
 }
@@ -166,7 +170,7 @@ input:focus-visible {
 .challenge-crumb span {
   color: var(--muted);
   font-family: "SFMono-Regular", Consolas, monospace;
-  font-size: 0.56rem;
+  font-size: var(--font-micro);
   font-weight: 700;
   letter-spacing: 0.13em;
 }
@@ -178,7 +182,7 @@ input:focus-visible {
 
 .challenge-crumb strong {
   color: #c7d6e1;
-  font-size: 0.74rem;
+  font-size: var(--font-sm);
   font-weight: 600;
 }
 
@@ -218,7 +222,7 @@ input:focus-visible {
   color: var(--cyan);
   background: rgba(83, 213, 218, 0.06);
   font-family: "SFMono-Regular", Consolas, monospace;
-  font-size: 0.6rem;
+  font-size: var(--font-micro);
   font-weight: 700;
   letter-spacing: 0.12em;
 }
@@ -241,6 +245,58 @@ input:focus-visible {
 .simulator-canvas {
   position: absolute;
   inset: 0;
+  background: #0a141d;
+}
+
+.simulator-canvas canvas {
+  display: block;
+  background: #0a141d;
+}
+
+.scene-status-overlay {
+  position: absolute;
+  z-index: 6;
+  inset: 0;
+  display: grid;
+  place-content: center;
+  justify-items: center;
+  gap: 8px;
+  padding: 24px;
+  color: #dce8ef;
+  text-align: center;
+  background:
+    radial-gradient(circle at 50% 45%, rgba(43, 103, 120, 0.2), transparent 32%),
+    #0a141d;
+}
+
+.scene-status-overlay > svg {
+  color: var(--orange);
+}
+
+.scene-status-overlay strong {
+  font-size: 1rem;
+}
+
+.scene-status-overlay span {
+  max-width: 420px;
+  color: var(--muted-strong);
+  font-size: var(--font-sm);
+  line-height: 1.55;
+}
+
+.scene-status-overlay button {
+  display: inline-flex;
+  height: 36px;
+  align-items: center;
+  gap: 7px;
+  margin-top: 4px;
+  padding: 0 12px;
+  border: 1px solid var(--panel-border-strong);
+  border-radius: 6px;
+  color: var(--cyan);
+  background: var(--cyan-soft);
+  font-size: var(--font-sm);
+  cursor: pointer;
 }
 
 .webgl-fallback {
@@ -319,14 +375,14 @@ input:focus-visible {
 .panel-footer {
   color: var(--muted);
   font-family: "SFMono-Regular", Consolas, monospace;
-  font-size: 0.57rem;
+  font-size: var(--font-micro);
   font-weight: 700;
   letter-spacing: 0.13em;
 }
 
 .panel-header strong {
   color: #cfdae2;
-  font-size: 0.76rem;
+  font-size: var(--font-sm);
 }
 
 .panel-header button {
@@ -371,7 +427,7 @@ input:focus-visible {
   gap: 4px;
   color: #a9bac7;
   background: rgba(5, 13, 20, 0.28);
-  font-size: 0.69rem;
+  font-size: var(--font-sm);
   text-align: center;
   backdrop-filter: blur(1px);
   cursor: not-allowed;
@@ -380,7 +436,7 @@ input:focus-visible {
 .blockly-editor__lock span {
   color: var(--orange);
   font-family: "SFMono-Regular", Consolas, monospace;
-  font-size: 0.58rem;
+  font-size: var(--font-micro);
   font-weight: 800;
   letter-spacing: 0.15em;
 }
@@ -394,15 +450,17 @@ input:focus-visible {
   background: #09141d !important;
 }
 
-.blocklyTreeRow {
+.blocklyTreeRow,
+.blocklyToolboxCategory {
   height: 34px !important;
   margin: 4px 6px !important;
   border-radius: 5px;
 }
 
-.blocklyTreeLabel {
+.blocklyTreeLabel,
+.blocklyToolboxCategoryLabel {
   font-family: "Segoe UI", sans-serif !important;
-  font-size: 12px !important;
+  font-size: 14px !important;
 }
 
 .blocklyFlyoutBackground {
@@ -445,7 +503,7 @@ input:focus-visible {
 .challenge-card > p {
   margin: 0 0 12px;
   color: #879cab;
-  font-size: 0.69rem;
+  font-size: var(--font-sm);
   line-height: 1.55;
 }
 
@@ -484,7 +542,7 @@ input:focus-visible {
   border-radius: 6px;
   color: #91a4b2;
   background: rgba(255, 255, 255, 0.018);
-  font-size: 0.67rem;
+  font-size: var(--font-sm);
   cursor: pointer;
 }
 
@@ -492,7 +550,7 @@ input:focus-visible {
   margin-left: auto;
   color: #657c8c;
   font-family: "SFMono-Regular", Consolas, monospace;
-  font-size: 0.58rem;
+  font-size: var(--font-micro);
 }
 
 .target-toggle.is-active {
@@ -532,20 +590,20 @@ input:focus-visible {
 
 .joint-row strong {
   color: #bfcdd6;
-  font-size: 0.68rem;
+  font-size: var(--font-xs);
   font-weight: 600;
 }
 
 .joint-row small {
   color: #657b8b;
   font-family: "SFMono-Regular", Consolas, monospace;
-  font-size: 0.54rem;
+  font-size: var(--font-micro);
 }
 
 .joint-row output {
   color: #e4edf2;
   font-family: "SFMono-Regular", Consolas, monospace;
-  font-size: 0.75rem;
+  font-size: var(--font-sm);
 }
 
 .coordinate-readout {
@@ -560,7 +618,7 @@ input:focus-visible {
 .coordinate-readout > span {
   color: #687f8e;
   font-family: "SFMono-Regular", Consolas, monospace;
-  font-size: 0.54rem;
+  font-size: var(--font-micro);
   letter-spacing: 0.1em;
 }
 
@@ -572,13 +630,13 @@ input:focus-visible {
 .coordinate-readout > div span {
   color: #a9bbc7;
   font-family: "SFMono-Regular", Consolas, monospace;
-  font-size: 0.62rem;
+  font-size: var(--font-xs);
 }
 
 .coordinate-readout small {
   margin-right: 3px;
   color: var(--cyan);
-  font-size: 0.48rem;
+  font-size: var(--font-micro);
 }
 
 .metric-grid {
@@ -600,14 +658,14 @@ input:focus-visible {
 .metric-card span,
 .duration-row span {
   color: #728897;
-  font-size: 0.59rem;
+  font-size: var(--font-xs);
 }
 
 .metric-card strong {
   margin-top: 1px;
   color: #dce7ed;
   font-family: "SFMono-Regular", Consolas, monospace;
-  font-size: 0.94rem;
+  font-size: 1rem;
 }
 
 .duration-row {
@@ -621,7 +679,7 @@ input:focus-visible {
 .duration-row strong {
   color: var(--cyan);
   font-family: "SFMono-Regular", Consolas, monospace;
-  font-size: 0.72rem;
+  font-size: var(--font-sm);
 }
 
 .result-section {
@@ -638,7 +696,7 @@ input:focus-visible {
   margin-right: auto;
   color: #748998;
   font-family: "SFMono-Regular", Consolas, monospace;
-  font-size: 0.55rem;
+  font-size: var(--font-micro);
   letter-spacing: 0.1em;
 }
 
@@ -652,7 +710,7 @@ input:focus-visible {
 .final-score small {
   margin-left: 4px;
   color: #627887;
-  font-size: 0.55rem;
+  font-size: var(--font-micro);
 }
 
 .score-bars {
@@ -665,7 +723,7 @@ input:focus-visible {
   justify-content: space-between;
   margin-bottom: 4px;
   color: #8398a7;
-  font-size: 0.59rem;
+  font-size: var(--font-xs);
 }
 
 .score-row strong {
@@ -693,7 +751,7 @@ input:focus-visible {
   border-radius: 6px;
   color: #728897;
   background: rgba(255, 255, 255, 0.012);
-  font-size: 0.63rem;
+  font-size: var(--font-xs);
   line-height: 1.55;
   text-align: center;
 }
@@ -726,7 +784,7 @@ input:focus-visible {
   border-radius: 6px;
   color: #aabac5;
   background: transparent;
-  font-size: 0.67rem;
+  font-size: var(--font-sm);
   font-weight: 600;
   cursor: pointer;
 }
@@ -790,7 +848,7 @@ input:focus-visible {
 .log-drawer__summary > span,
 .log-drawer__summary > small {
   font-family: "SFMono-Regular", Consolas, monospace;
-  font-size: 0.52rem;
+  font-size: var(--font-micro);
   font-weight: 700;
   letter-spacing: 0.1em;
 }
@@ -802,7 +860,7 @@ input:focus-visible {
 .log-drawer__summary p {
   overflow: hidden;
   margin: 0;
-  font-size: 0.58rem;
+  font-size: var(--font-xs);
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -829,7 +887,7 @@ input:focus-visible {
   border-bottom: 1px solid var(--panel-border);
   color: #8fa2af;
   font-family: "SFMono-Regular", Consolas, monospace;
-  font-size: 0.56rem;
+  font-size: var(--font-micro);
 }
 
 .log-drawer__title button {
@@ -860,7 +918,7 @@ input:focus-visible {
   padding: 4px 2px;
   color: #98aab6;
   font-family: "SFMono-Regular", Consolas, monospace;
-  font-size: 0.57rem;
+  font-size: var(--font-xs);
   line-height: 1.35;
 }
 
@@ -892,7 +950,7 @@ input:focus-visible {
   color: #8197a6;
   background: rgba(8, 18, 26, 0.9);
   font-family: "SFMono-Regular", Consolas, monospace;
-  font-size: 0.52rem;
+  font-size: var(--font-micro);
   letter-spacing: 0.08em;
   cursor: pointer;
   backdrop-filter: blur(12px);
@@ -928,14 +986,14 @@ input:focus-visible {
   color: #e7b4ab;
   background: rgba(41, 19, 20, 0.94);
   box-shadow: 0 12px 35px rgba(0, 0, 0, 0.32);
-  font-size: 0.68rem;
+  font-size: var(--font-sm);
   transform: translateX(-50%);
 }
 
 .error-banner strong {
   color: var(--danger);
   font-family: "SFMono-Regular", Consolas, monospace;
-  font-size: 0.55rem;
+  font-size: var(--font-micro);
   letter-spacing: 0.1em;
 }
 
@@ -962,14 +1020,14 @@ input:focus-visible {
 .stage-readout span {
   color: #526b79;
   font-family: "SFMono-Regular", Consolas, monospace;
-  font-size: 0.48rem;
+  font-size: var(--font-micro);
   letter-spacing: 0.12em;
 }
 
 .stage-readout strong {
   color: #8197a5;
   font-family: "SFMono-Regular", Consolas, monospace;
-  font-size: 0.58rem;
+  font-size: var(--font-xs);
   font-weight: 500;
 }
 

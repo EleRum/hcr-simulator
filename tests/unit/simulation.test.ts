@@ -8,6 +8,7 @@ import {
   createInitialJointAngles,
 } from '../../src/features/robot/kinematics';
 import { SimulationEngine } from '../../src/features/simulation/SimulationEngine';
+import { clampFrameDeltaMs } from '../../src/features/simulation/frameTiming';
 import {
   findSweptVoxelHits,
   segmentIntersectsAabb,
@@ -27,6 +28,14 @@ beforeAll(async () => {
   defaultChallenge = await new LocalChallengeProvider().getChallenge(
     DEFAULT_CHALLENGE_ID,
   );
+});
+
+describe('render frame timing', () => {
+  it('converts normal frame deltas and clamps long frames', () => {
+    expect(clampFrameDeltaMs(0.016)).toBe(16);
+    expect(clampFrameDeltaMs(0.5)).toBe(100);
+    expect(clampFrameDeltaMs(-0.1)).toBe(0);
+  });
 });
 
 describe('robot kinematics', () => {
