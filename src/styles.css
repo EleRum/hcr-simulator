@@ -1,0 +1,59 @@
+:root {
+  color: #dbe7f5;
+  background: #081019;
+  font-family:
+    Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
+    sans-serif;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  min-width: 320px;
+  min-height: 100%;
+  margin: 0;
+}
+
+body {
+  min-height: 100vh;
+  background:
+    radial-gradient(circle at 50% 30%, rgba(25, 82, 106, 0.22), transparent 42%),
+    #081019;
+}
+
+button,
+input,
+select {
+  font: inherit;
+}
+
+.phase-shell {
+  display: grid;
+  min-height: 100vh;
+  place-content: center;
+  padding: 2rem;
+  text-align: center;
+}
+
+.phase-shell h1 {
+  margin: 0.4rem 0;
+  font-size: clamp(2.5rem, 7vw, 5rem);
+  letter-spacing: -0.05em;
+}
+
+.phase-shell p {
+  margin: 0;
+  color: #91a6b9;
+}
+
+.phase-kicker {
+  font-family: "SFMono-Regular", Consolas, monospace;
+  font-size: 0.75rem;
+  letter-spacing: 0.18em;
+}

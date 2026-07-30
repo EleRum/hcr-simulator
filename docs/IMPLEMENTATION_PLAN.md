@@ -74,11 +74,11 @@ tests/
 
 ### Phase 1 — 工程与质量门
 
-- [ ] 创建 React + TypeScript + Vite 工程。
-- [ ] 安装 R3F、Three.js、Drei、Blockly、Zustand。
-- [ ] 配置 ESLint、Vitest、jsdom 和 Playwright。
-- [ ] 提供 `dev`、`typecheck`、`lint`、`test`、`build`、`test:e2e` 命令。
-- [ ] 建立应用入口、全局样式和测试初始化。
+- [x] 创建 React + TypeScript + Vite 工程。
+- [x] 安装 R3F、Three.js、Drei、Blockly、Zustand。
+- [x] 配置 ESLint、Vitest、jsdom 和 Playwright。
+- [x] 提供 `dev`、`typecheck`、`lint`、`test`、`build`、`test:e2e` 命令。
+- [x] 建立应用入口、全局样式和测试初始化。
 
 阶段出口：空应用可以启动和构建，全部质量命令存在。
 
