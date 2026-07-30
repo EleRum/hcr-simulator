@@ -18,6 +18,28 @@ describe('LocalChallengeProvider', () => {
     expect(summaries).toHaveLength(1);
     expect(first.initialHair.voxels).toBeInstanceOf(Set);
     expect(first.targetHair.voxels.size).toBe(215);
+    expect(first.robotConfig.joints).toHaveLength(5);
+    expect(first.robotConfig.joints.map((joint) => joint.id)).toEqual([
+      'baseYaw',
+      'shoulderRoll',
+      'shoulder',
+      'elbow',
+      'wrist',
+    ]);
+    expect(first.robotConfig.joints[1]).toMatchObject({
+      id: 'shoulderRoll',
+      axis: 'x',
+      minAngleDeg: -45,
+      maxAngleDeg: 45,
+      initialAngleDeg: 0,
+      speedDegPerSec: 45,
+    });
+    expect(first.robotConfig.geometry.collision).toEqual({
+      linkRadius: 0.075,
+      jointRadius: 0.18,
+      toolShaftRadius: 0.075,
+      headClearance: 0.02,
+    });
     expect(first.initialHair.voxels).not.toBe(second.initialHair.voxels);
   });
 
@@ -27,6 +49,21 @@ describe('LocalChallengeProvider', () => {
     await expect(provider.getChallenge('missing')).rejects.toThrow(
       'was not found',
     );
+  });
+
+  it('rejects invalid collision dimensions and an unsafe initial pose', () => {
+    const invalidRadius = cloneDefinition();
+    invalidRadius.robotConfig.geometry.collision.linkRadius = 0;
+    expect(() => validateChallengeDefinition(invalidRadius)).toThrow(
+      'greater than 0',
+    );
+
+    const collidingInitialPose = cloneDefinition();
+    collidingInitialPose.voxelConfig.headCenter = [0, 0.4, 0];
+    collidingInitialPose.voxelConfig.headScale = [0.1, 0.1, 0.1];
+    expect(() =>
+      validateChallengeDefinition(collidingInitialPose),
+    ).toThrow('Initial robot pose collides with the head');
   });
 });
 

@@ -49,21 +49,20 @@ describe('Blockly program compiler', () => {
     });
     const second = compileWorkspace(secondWorkspace, challenge);
 
-    expect(first.program.sourceBlockCount).toBe(10);
-    expect(first.executedCommandCount).toBe(10);
+    expect(first.program.sourceBlockCount).toBe(5);
+    expect(first.executedCommandCount).toBe(5);
     expect(first.runtimeCommands).toEqual(second.runtimeCommands);
     expect(first.runtimeCommands[0]).toMatchObject({
       type: 'set-joint-angle',
-      jointId: 'shoulder',
-      angleDeg: 50,
-      sourceBlockId: 'starter-shoulder',
+      jointId: 'shoulderRoll',
+      angleDeg: 15,
+      sourceBlockId: 'starter-shoulder-roll',
     });
     expect(
       first.runtimeCommands.filter(
-        (command) =>
-          command.sourceBlockId === 'starter-repeat-wait',
+        (command) => command.type === 'set-joint-angle',
       ),
-    ).toHaveLength(2);
+    ).toHaveLength(5);
 
     secondWorkspace.dispose();
   });

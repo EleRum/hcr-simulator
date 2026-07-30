@@ -4,7 +4,7 @@
 >
 > 状态：**当前生效的文档基线**。v0.2 保留用于历史追溯；如两者冲突，以 v0.3 为准。
 >
-> 当前仓库阶段：**仅文档，尚未创建前端工程**。
+> 当前仓库阶段：**Phase 1–6 与五关节/头部防穿模增量已实现；跨浏览器人工视觉验收待执行**。
 >
 > 依据：v0.2、2026-07-30 计划模式确认结果及后续范围说明。
 
@@ -12,7 +12,7 @@
 
 ## 1. 一句话定义
 
-HCR Simulator 是一个纯前端可运行的 Web 3D 编程 Demo：用户通过 Blockly 编排真实舵机语义的绝对关节角度指令，驱动 R3F / Three.js 中的程序化四关节机械臂；机械臂末端扫过 Hair Voxel 时完成剪除；系统基于目标发型 Voxel IoU、程序效率和确定性估算时间计算加权得分。
+HCR Simulator 是一个纯前端可运行的 Web 3D 编程 Demo：用户通过 Blockly 编排真实舵机语义的绝对关节角度指令，驱动 R3F / Three.js 中的程序化五关节机械臂；机械臂末端扫过 Hair Voxel 时完成剪除，整套机械装置由确定性几何约束阻止进入头部；系统基于目标发型 Voxel IoU、程序效率和确定性估算时间计算加权得分。
 
 ## 2. 目标、观众与成功标准
 
@@ -42,7 +42,8 @@ HCR Simulator 是一个纯前端可运行的 Web 3D 编程 Demo：用户通过 B
 - React + TypeScript + Vite 单页应用。
 - React Three Fiber、Three.js 与 OrbitControls。
 - 一个本地“厚帽型 → 对称整齐短发”Challenge。
-- 程序化头部、Hair Voxel 和四关节机械臂。
+- 程序化头部、Hair Voxel 和五关节机械臂。
+- 头部不可穿透几何约束、最后安全姿态回退和碰撞错误定位。
 - Blockly 绝对角度、Wait 和 Repeat 积木。
 - Program IR 编译、校验、循环展开和顺序执行。
 - Run、Pause、Resume、Step、Stop 和 Reset。
@@ -59,7 +60,7 @@ HCR Simulator 是一个纯前端可运行的 Web 3D 编程 Demo：用户通过 B
 - ESP、真实舵机、MQTT、PWM、WebSerial、WebBluetooth。
 - Cartesian Move、逆运动学 IK 或多个舵机并发运动。
 - 相对角度、条件、传感器、变量或自定义函数积木。
-- 物理引擎、头部刚体阻挡、真实发丝或剪刀开合。
+- 物理引擎、碰撞反弹/摩擦/滑动、机械臂自碰撞、真实发丝或剪刀开合。
 - 外部 GLB / FBX 机械臂和头发资产。
 - 多 Challenge、多人竞赛、手机专项适配或生产部署。
 
@@ -153,6 +154,14 @@ export interface RobotGeometryConfig {
   forearmLength: number;
   toolLength: number;
   toolRadius: number;
+  collision: RobotCollisionConfig;
+}
+
+export interface RobotCollisionConfig {
+  linkRadius: number;
+  jointRadius: number;
+  toolShaftRadius: number;
+  headClearance: number;
 }
 
 export interface RobotState {
@@ -220,11 +229,12 @@ Provider 必须返回独立集合，避免调用方修改共享数据。Reset �
 | ID | 显示名 | 轴 | 角度范围 | 初始角度 | 速度 |
 |---|---|---|---:|---:|---:|
 | `baseYaw` | 底座旋转 | Y | -60°～60° | -45° | 60°/s |
+| `shoulderRoll` | 肩部侧摆 | X | -45°～45° | 0° | 45°/s |
 | `shoulder` | 肩关节 | Z | -20°～100° | 45° | 45°/s |
 | `elbow` | 肘关节 | Z | -135°～10° | -80° | 60°/s |
 | `wrist` | 腕关节 | Z | -100°～100° | 35° | 75°/s |
 
-首版关节按数组顺序构成嵌套链。Base Yaw 旋转整条手臂，后三个 Z 轴关节形成局部平面链。所有命令一次只驱动一个关节。
+首版关节按 `baseYaw → shoulderRoll → shoulder → elbow → wrist` 顺序构成嵌套链。完整旋转顺序为 `Ry(baseYaw) × Rx(shoulderRoll) × Rz(shoulder/elbow/wrist)`；`shoulderRoll = 0°` 时与原四关节平面姿态兼容。所有命令一次只驱动一个关节。
 
 推荐默认几何参数：
 
@@ -235,6 +245,10 @@ Provider 必须返回独立集合，避免调用方修改共享数据。Reset �
 | Forearm Length | 0.90 |
 | Tool Length | 0.35 |
 | Tool Collision Radius | 0.12 |
+| Link Collision Radius | 0.075 |
+| Joint Collision Radius | 0.18 |
+| Tool Shaft Collision Radius | 0.075 |
+| Head Clearance | 0.02 |
 
 这些值属于 Challenge 配置，而不是机械臂组件常量。实现阶段允许为满足示例程序验收而微调几何位置，但必须同步本文件、Challenge 数据和测试。
 
@@ -250,10 +264,12 @@ Provider 必须返回独立集合，避免调用方修改共享数据。Reset �
 ### 6.3 示例程序
 
 - 首次加载时反序列化一个可编辑的 Blockly Workspace。
-- 程序使用绝对关节角度和 Wait，可包含 Repeat 以验证嵌套 IR。
+- 程序使用绝对关节角度，可包含 Wait 与 Repeat 以验证嵌套 IR。
+- 程序至少包含一条非零 `shoulderRoll` 命令，并在全路径头部安全校验下自然结束。
 - 程序自然结束后 Completion Score 必须不低于 80。
 - 示例程序应保留可优化空间，不要求 100 分。
 - 示例工作区属于 Challenge 数据，不写在 BlocklyEditor 组件中。
+- 当前校准程序包含 5 个源积木/原子命令，`shoulderRoll = 15°`，参考程序成本为 6.25，参考时间为 5645ms。
 
 ## 7. Blockly 与 Program IR
 
@@ -346,6 +362,9 @@ export type SimulationStatus =
 - 相同目标角度的命令时长为 0，但仍计入 Executed Command Count 和日志。
 - Wait 不移动机械臂，也不触发静止接触检测。
 - 高频插值由引擎的 `tick(deltaMs)` 推进；Pause 时不调用有效时间推进。
+- 每个活动关节按最多 0.5° 子步校验头部安全约束；首次碰撞后执行 12 次二分搜索并提交最后安全角度。
+- 碰撞命令不计入 Executed Command Count，后续命令不再执行，状态进入 `error` 且不生成正式成绩。
+- 碰撞错误保留 Hair、关节、临时指标和当前源积木定位；Reset 或重新 Run 恢复 Challenge 初始安全姿态。
 
 ### 8.4 确定性估算时间
 
@@ -368,12 +387,21 @@ EstimatedDurationMs =
 ### 9.1 正向运动学
 
 - 世界坐标使用 Y Up。
-- Base Yaw 绕 Y 轴，Shoulder / Elbow / Wrist 绕各自局部 Z 轴。
+- Base Yaw 绕 Y 轴，Shoulder Roll 绕局部 X 轴，Shoulder / Elbow / Wrist 绕各自局部 Z 轴。
+- 旋转链固定为 `Ry(baseYaw) × Rx(shoulderRoll) × Rz(shoulder) × Rz(elbow) × Rz(wrist)`，后续关节使用其父级累计旋转。
 - 每个关节变换顺序必须与 R3F 嵌套 Group 一致。
 - 提供纯函数 `computeRobotPose(config, jointAngles)`，返回各关节和末端世界坐标，供控制器、碰撞与测试共用。
 - 禁止从 Three.js Scene Graph 反向读取位置作为唯一业务事实。
 
-### 9.2 连续扫掠接触
+### 9.2 头部防穿模
+
+- 头部逻辑碰撞体为 `headCenter/headScale` 定义的不可穿透椭球，Hair Voxel 可剪除，Target Ghost 不参与碰撞。
+- 底座、上臂、前臂和工具杆使用线段加半径的胶囊近似；关节与末端使用退化线段表示的球体。
+- 检测时将胶囊线段转换到“部件半径 + Head Clearance”扩张后的椭球单位空间，计算线段到原点的最近距离。
+- Challenge 加载时必须验证初始姿态安全；非法初始配置由 Provider 拒绝。
+- 不实现反弹、摩擦、滑动、自动绕障、机械臂自碰撞或刚体动力学。
+
+### 9.3 连续扫掠接触
 
 每次有效运动 tick：
 
@@ -386,7 +414,7 @@ EstimatedDurationMs =
 
 Sphere 与 Voxel AABB 的重叠应使用确定性几何函数。静止初始姿态、Wait 和纯相机操作不剪发。已经删除的 voxel 不重复计数或记录。
 
-### 9.3 Hair State
+### 9.4 Hair State
 
 - 运行时 Hair State 为 `Set<VoxelKey>`。
 - 删除操作返回新集合或由 Store 的受控 action 完成。
@@ -521,7 +549,7 @@ POST /api/simulations
 右侧至少显示：
 
 - 当前状态；
-- 四个关节的当前角度；
+- 五个关节的当前角度；
 - 末端 X/Y/Z；
 - 当前/初始/目标 voxel 数量；
 - Source Block Count；
@@ -553,6 +581,7 @@ POST /api/simulations
 - WebGL 不可用：展示浏览器能力说明，不渲染空白 Canvas。
 - 编译失败：保留工作区，在面板展示错误并尽可能选择/高亮相关积木。
 - 运行时错误：状态进入 error，保留现场，允许 Reset 或重新 Run。
+- 头部碰撞：日志包含碰撞部件、活动关节、安全角度和源积木；Blockly 保持高亮并恢复编辑。
 - 非法 Challenge 配置：由 Local Provider 拒绝并报告字段位置。
 
 ## 14. 测试与验收
@@ -561,7 +590,9 @@ POST /api/simulations
 
 - Voxel key 转换和发型生成器不变量。
 - IoU、效率、时间和最终评分边界。
-- 四关节正向运动学的已知姿态。
+- 五关节正向运动学的已知姿态，并验证 `shoulderRoll = 0°` 的兼容姿态与非零三维侧摆。
+- 扩张椭球的外部、相切、穿入、胶囊穿越、关节球与安全间距。
+- 大帧/小帧的碰撞安全边界、命令不完成、无正式评分和 Reset 恢复。
 - Sphere Sweep 与 Voxel AABB 的命中、不命中、端点和多命中。
 - Blockly 编译、Source Block Count、嵌套 Repeat 和 500 命令上限。
 - 角度、Wait、Repeat、空程序和多顶层程序校验。
@@ -578,9 +609,10 @@ POST /api/simulations
 3. Run 自动重置并锁定 Blockly；
 4. Pause 冻结指标，Step 完成一条命令，Resume 继续；
 5. 程序结束后 voxel 数减少、状态为 completed；
-6. Completion Score ≥80，四项成绩可见且为有限数；
+6. 第五关节在 Blockly 与 Inspector 中可见，安全示例 Completion Score ≥80，四项成绩可见且为有限数；
 7. Reset 恢复初始 voxel/关节并清除正式结果；
-8. 空程序或非法数据能显示错误且不开始执行。
+8. 故意碰头的程序停在安全姿态、进入 error、定位源积木且不显示正式成绩；
+9. 空程序或非法数据能显示错误且不开始执行。
 
 ### 14.3 质量门
 
@@ -605,6 +637,6 @@ npm run test:e2e
 - 多 Challenge、双人竞赛和 CAT / Dynamic QBank；
 - 后端正式协议、鉴权与数据存储；
 - 真实 ESP / MQTT 接入；
-- 物理引擎、头部碰撞和更大规模 voxel 优化。
+- 物理引擎、碰撞响应、机械臂自碰撞和更大规模 voxel 优化。
 
 这些能力只能通过新增配置、接口实现或版本化协议扩展，不得破坏首版 Program IR、Provider 和 Score Result 的既有语义。

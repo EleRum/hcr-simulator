@@ -10,7 +10,7 @@ export const defaultChallengeDefinition: ChallengeDefinition = {
   id: DEFAULT_CHALLENGE_ID,
   name: '整齐短发修剪',
   description:
-    '使用四关节机械臂移除厚帽型外层 voxel，尽量保留对称短发目标。',
+    '使用五关节机械臂安全移除厚帽型外层 voxel，避免机械装置接触头部并尽量保留对称短发目标。',
   robotConfig: {
     joints: [
       {
@@ -21,6 +21,15 @@ export const defaultChallengeDefinition: ChallengeDefinition = {
         maxAngleDeg: 60,
         initialAngleDeg: -45,
         speedDegPerSec: 60,
+      },
+      {
+        id: 'shoulderRoll',
+        name: '肩部侧摆',
+        axis: 'x',
+        minAngleDeg: -45,
+        maxAngleDeg: 45,
+        initialAngleDeg: 0,
+        speedDegPerSec: 45,
       },
       {
         id: 'shoulder',
@@ -57,6 +66,12 @@ export const defaultChallengeDefinition: ChallengeDefinition = {
       forearmLength: 0.9,
       toolLength: 0.35,
       toolRadius: 0.12,
+      collision: {
+        linkRadius: 0.075,
+        jointRadius: 0.18,
+        toolShaftRadius: 0.075,
+        headClearance: 0.02,
+      },
     },
   },
   voxelConfig: {
@@ -75,8 +90,8 @@ export const defaultChallengeDefinition: ChallengeDefinition = {
       efficiency: 0.25,
       time: 0.15,
     },
-    referenceProgramCost: 8,
-    referenceTimeMs: 12_000,
+    referenceProgramCost: 6.25,
+    referenceTimeMs: 5_645,
     commandWeight: 0.25,
   },
 };

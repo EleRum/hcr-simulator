@@ -1,0 +1,169 @@
+import type {
+  Challenge,
+  JointId,
+  Vec3Tuple,
+} from '../../types/domain';
+import type { RobotPose } from './kinematics';
+
+export type RobotCollisionPart =
+  | 'base'
+  | 'shoulder-joint'
+  | 'upper-arm'
+  | 'elbow-joint'
+  | 'forearm'
+  | 'wrist-joint'
+  | 'tool-shaft'
+  | 'end-effector';
+
+export interface HeadCollision {
+  part: RobotCollisionPart;
+  partLabel: string;
+}
+
+export interface BlockedHeadCollision extends HeadCollision {
+  jointId: JointId;
+  safeAngleDeg: number;
+}
+
+interface CollisionPrimitive {
+  part: RobotCollisionPart;
+  partLabel: string;
+  start: Vec3Tuple;
+  end: Vec3Tuple;
+  radius: number;
+}
+
+export function findRobotHeadCollision(
+  pose: RobotPose,
+  voxelConfig: Challenge['voxelConfig'],
+  geometry: Challenge['robotConfig']['geometry'],
+): HeadCollision | undefined {
+  const { collision } = geometry;
+  const primitives: CollisionPrimitive[] = [
+    {
+      part: 'base',
+      partLabel: '底座',
+      start: pose.base,
+      end: pose.shoulder,
+      radius: collision.jointRadius,
+    },
+    {
+      part: 'shoulder-joint',
+      partLabel: '肩部关节',
+      start: pose.shoulder,
+      end: pose.shoulder,
+      radius: collision.jointRadius,
+    },
+    {
+      part: 'upper-arm',
+      partLabel: '上臂连杆',
+      start: pose.shoulder,
+      end: pose.elbow,
+      radius: collision.linkRadius,
+    },
+    {
+      part: 'elbow-joint',
+      partLabel: '肘关节',
+      start: pose.elbow,
+      end: pose.elbow,
+      radius: collision.jointRadius,
+    },
+    {
+      part: 'forearm',
+      partLabel: '前臂连杆',
+      start: pose.elbow,
+      end: pose.wrist,
+      radius: collision.linkRadius,
+    },
+    {
+      part: 'wrist-joint',
+      partLabel: '腕关节',
+      start: pose.wrist,
+      end: pose.wrist,
+      radius: collision.jointRadius,
+    },
+    {
+      part: 'tool-shaft',
+      partLabel: '末端工具杆',
+      start: pose.toolBase,
+      end: pose.endEffector,
+      radius: collision.toolShaftRadius,
+    },
+    {
+      part: 'end-effector',
+      partLabel: '末端工具',
+      start: pose.endEffector,
+      end: pose.endEffector,
+      radius: geometry.toolRadius,
+    },
+  ];
+
+  return primitives.find((primitive) =>
+    segmentIntersectsExpandedEllipsoid(
+      primitive.start,
+      primitive.end,
+      voxelConfig.headCenter,
+      voxelConfig.headScale,
+      primitive.radius + collision.headClearance,
+    ),
+  );
+}
+
+export function segmentIntersectsExpandedEllipsoid(
+  start: Vec3Tuple,
+  end: Vec3Tuple,
+  center: Vec3Tuple,
+  scale: Vec3Tuple,
+  expansion: number,
+): boolean {
+  const axes: Vec3Tuple = [
+    scale[0] + expansion,
+    scale[1] + expansion,
+    scale[2] + expansion,
+  ];
+  const normalizedStart = normalizePoint(start, center, axes);
+  const normalizedEnd = normalizePoint(end, center, axes);
+  const direction: Vec3Tuple = [
+    normalizedEnd[0] - normalizedStart[0],
+    normalizedEnd[1] - normalizedStart[1],
+    normalizedEnd[2] - normalizedStart[2],
+  ];
+  const lengthSquared = dot(direction, direction);
+  const closestT =
+    lengthSquared === 0
+      ? 0
+      : Math.min(
+          1,
+          Math.max(
+            0,
+            -dot(normalizedStart, direction) / lengthSquared,
+          ),
+        );
+  const closest: Vec3Tuple = [
+    normalizedStart[0] + direction[0] * closestT,
+    normalizedStart[1] + direction[1] * closestT,
+    normalizedStart[2] + direction[2] * closestT,
+  ];
+
+  return dot(closest, closest) <= 1;
+}
+
+function normalizePoint(
+  point: Vec3Tuple,
+  center: Vec3Tuple,
+  axes: Vec3Tuple,
+): Vec3Tuple {
+  return [
+    (point[0] - center[0]) / axes[0],
+    (point[1] - center[1]) / axes[1],
+    (point[2] - center[2]) / axes[2],
+  ];
+}
+
+function dot(left: Vec3Tuple, right: Vec3Tuple): number {
+  return (
+    left[0] * right[0] +
+    left[1] * right[1] +
+    left[2] * right[2]
+  );
+}

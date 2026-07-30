@@ -15,6 +15,44 @@ test.describe('HCR Simulator workbench', () => {
     await expect(page.getByTestId('current-voxel-count')).toHaveText(
       '241',
     );
+    await expect(page.locator('.joint-row')).toHaveCount(5);
+    await expect(
+      page
+        .locator('.blocklyBlockCanvas')
+        .filter({ hasText: '肩部侧摆' }),
+    ).toHaveCount(1);
+  });
+
+  test('blocks a head collision at the last safe pose without scoring', async ({
+    page,
+  }) => {
+    await setBlocklyNumberField(page, 'starter-shoulder-roll', 0);
+    await setBlocklyNumberField(page, 'starter-shoulder', 50);
+    await setBlocklyNumberField(page, 'starter-elbow', -15);
+    await setBlocklyNumberField(page, 'starter-wrist', -30);
+    await setBlocklyNumberField(page, 'starter-base-sweep', -24);
+
+    await page.getByTestId('run-button').click();
+
+    await expect(page.getByTestId('simulation-status')).toHaveText(
+      '错误',
+      { timeout: 15_000 },
+    );
+    await expect(page.getByRole('alert')).toContainText('baseYaw');
+    await expect(page.getByRole('alert')).toContainText('安全角度');
+    await expect(page.getByRole('alert')).toContainText(
+      'starter-base-sweep',
+    );
+    await expect(page.getByTestId('executed-command-count')).toHaveText(
+      '4',
+    );
+    await expect(page.getByTestId('final-score')).toHaveCount(0);
+    await expect(page.locator('.blocklyHighlighted')).toHaveCount(1);
+    await expect(page.getByTestId('run-button')).toBeEnabled();
+
+    await page.getByTestId('reset-button').click();
+    await expect(page.getByTestId('simulation-status')).toHaveText('待机');
+    await expect(page.getByRole('alert')).toHaveCount(0);
   });
 
   test('runs the starter program to a reproducible scored result', async ({
@@ -46,10 +84,10 @@ test.describe('HCR Simulator workbench', () => {
       { timeout: 15_000 },
     );
     await expect(page.getByTestId('current-voxel-count')).toHaveText(
-      '217',
+      '230',
     );
     await expect(page.getByTestId('executed-command-count')).toHaveText(
-      '10',
+      '5',
     );
     await expect(page.getByTestId('final-score')).toBeVisible();
     await expect(page.getByTestId('simulator-canvas')).toHaveAttribute(
@@ -214,4 +252,21 @@ async function expectReadableFontSizes(
     );
     expect(fontSize, `${selector} font size`).toBeGreaterThanOrEqual(11);
   }
+}
+
+async function setBlocklyNumberField(
+  page: import('@playwright/test').Page,
+  blockId: string,
+  value: number,
+): Promise<void> {
+  const field = page
+    .locator(
+      `.blocklyDraggable[data-id="${blockId}"] > .blocklyNumberField`,
+    )
+    .last();
+  await field.click({ force: true });
+  const input = page.locator('.blocklyHtmlInput');
+  await expect(input).toBeVisible();
+  await input.fill(String(value));
+  await input.press('Enter');
 }

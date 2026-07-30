@@ -1,6 +1,6 @@
 # HCR Simulator Demo 实施计划
 
-> 本文记录分阶段实施状态。用户已明确授权实施 Phase 1–6；Phase 7 仍需单独执行最终集成与人工视觉验收。
+> 本文记录分阶段实施状态。Phase 1–6、五关节/头部防穿模增量、自动化集成与质量门已完成；Phase 7 仅剩跨浏览器人工视觉验收。
 
 ## 1. 实施原则
 
@@ -30,6 +30,7 @@ src/
 │   ├── robot/
 │   │   ├── RobotModel.tsx
 │   │   ├── RobotController.ts
+│   │   ├── headCollision.ts
 │   │   └── kinematics.ts
 │   ├── voxel/
 │   │   ├── VoxelHair.tsx
@@ -107,19 +108,22 @@ tests/
 ### Phase 4 — 机械臂、仿真和碰撞
 
 - [x] 实现纯正向运动学函数和已知姿态测试。
+- [x] 增加 `shoulderRoll` 并将旋转链升级为五关节完整三维正向运动学。
 - [x] 实现 RobotController 的当前角度、目标角度和线性推进。
+- [x] 建立机械装置胶囊/球体与扩张头部椭球的确定性安全约束。
+- [x] 以最多 0.5° 子步和 12 次二分搜索停在最后安全姿态。
 - [x] 实现 Sphere Sweep / Voxel AABB 连续接触检测。
 - [x] 实现 Program Executor 与 SimulationEngine 状态机。
 - [x] 实现 Run、Pause、Resume、Step、Stop、Reset 和完成回调。
 - [x] 实现 Hair Set 删除、指标累积、日志上限和评分触发。
-- [x] 覆盖帧率无关碰撞、暂停冻结、单步边界和 Reset 单测。
+- [x] 覆盖帧率无关剪发/头部碰撞、暂停冻结、单步边界、错误定位和 Reset 单测。
 
 阶段出口：无 UI 时可用注入 delta 的测试完整运行程序，并得到命中集合和 ScoreResult。
 
 ### Phase 5 — R3F 场景
 
 - [x] 创建 Canvas、相机、灯光、地面和 OrbitControls。
-- [x] 使用嵌套 Group 渲染程序化四关节机械臂。
+- [x] 使用嵌套 Group 渲染程序化五关节机械臂和 X 轴肩部万向环。
 - [x] 使用当前 Hair Set 渲染可删除 voxel。
 - [x] 渲染不可剪头部、末端工具和可切换 Target Ghost。
 - [x] 在 `useFrame` 中推进引擎并更新高频 refs。
@@ -134,17 +138,17 @@ tests/
 - [x] 实现当前 Block 高亮和相关编译错误定位。
 - [x] 展示关节、末端、voxel、程序指标和结果分解。
 - [x] 实现面板折叠、键盘焦点、按钮禁用和 1280×720 降级布局。
-- [x] 校准唯一 Challenge 和示例程序，使 Completion Score ≥80。
+- [x] 校准含非零 `shoulderRoll` 的安全示例程序，使其自然结束且 Completion Score ≥80。
 
 阶段出口：人工可以完成从加载、运行、调试到评分和重置的完整流程。
 
 ### Phase 7 — 集成测试与交付
 
-- [ ] 完成 Playwright 主闭环和错误流程。
+- [x] 完成 Playwright 主闭环和错误流程。
 - [ ] 在 Chrome / Edge 的目标视口人工验收。
-- [ ] 运行全部质量门并修复失败。
-- [ ] 按实际工程更新 README 启动说明和验收清单。
-- [ ] 确认没有后端、硬件、持久化或部署依赖。
+- [x] 运行全部质量门并修复失败。
+- [x] 按实际工程更新 README 启动说明和验收清单。
+- [x] 确认没有后端、硬件、持久化或部署依赖。
 
 阶段出口：`docs/ACCEPTANCE.md` 全部适用项通过。
 
@@ -168,6 +172,8 @@ tests/
 - 运动 tick 先取得 previous position，再推进关节并取得 current position。
 - 碰撞函数无副作用，只返回命中的 VoxelKey。
 - SimulationEngine 统一删除 voxel、更新计数和写日志。
+- 头部安全约束在 RobotController 提交每个角度子步前执行，渲染层不得覆盖结果。
+- 头部碰撞命令保持未完成，SimulationEngine 进入 `error`、保留现场且不触发评分。
 
 ### 评分
 
@@ -181,6 +187,7 @@ tests/
 |---|---|
 | 示例机械臂路径误剪 Target | 将初始额外层与目标层留出碰撞半径安全间距，并用确定性集成测试校准 |
 | 低帧率漏碰撞 | 使用线段扫掠而非只检测当前帧端点 |
+| 机械装置穿入头部 | 对全部连杆、关节和工具执行扩张椭球约束，并对子步边界二分回退 |
 | Blockly 版本 API 变化 | 把注册、序列化和编译封装在 feature 内，不让版本细节扩散 |
 | 每帧 React 更新造成卡顿 | 高频状态留在引擎/ref，UI 快照限频 |
 | E2E WebGL 不稳定 | 主断言读取可见状态和业务结果，3D 视觉由人工验收补充 |

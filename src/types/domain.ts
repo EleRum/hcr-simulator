@@ -30,6 +30,14 @@ export interface RobotGeometryConfig {
   forearmLength: number;
   toolLength: number;
   toolRadius: number;
+  collision: RobotCollisionConfig;
+}
+
+export interface RobotCollisionConfig {
+  linkRadius: number;
+  jointRadius: number;
+  toolShaftRadius: number;
+  headClearance: number;
 }
 
 export interface RobotState {

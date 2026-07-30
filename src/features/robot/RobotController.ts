@@ -4,6 +4,17 @@ import {
   createInitialJointAngles,
   type RobotPose,
 } from './kinematics';
+import type {
+  BlockedHeadCollision,
+  HeadCollision,
+} from './headCollision';
+
+const MAX_ANGULAR_STEP_DEG = 0.5;
+const COLLISION_BISECTION_STEPS = 12;
+
+export type PoseConstraint = (
+  pose: RobotPose,
+) => HeadCollision | undefined;
 
 interface ActiveMove {
   jointId: JointId;
@@ -19,6 +30,7 @@ export interface MoveAdvanceResult {
   moved: boolean;
   previousEndEffector: Vec3Tuple;
   currentEndEffector: Vec3Tuple;
+  blockedCollision?: BlockedHeadCollision;
 }
 
 export class RobotController {
@@ -29,7 +41,10 @@ export class RobotController {
   private jointAngles: Record<JointId, number>;
   private activeMove: ActiveMove | undefined;
 
-  constructor(private readonly robotConfig: Challenge['robotConfig']) {
+  constructor(
+    private readonly robotConfig: Challenge['robotConfig'],
+    private readonly poseConstraint?: PoseConstraint,
+  ) {
     this.configById = new Map(
       robotConfig.joints.map((joint) => [joint.id, joint]),
     );
@@ -78,20 +93,54 @@ export class RobotController {
     }
 
     const move = this.activeMove;
-    const previousEndEffector = this.getPose().endEffector;
+    const previousPose = this.getPose();
+    const previousEndEffector = previousPose.endEffector;
     const remainingMs = Math.max(0, move.durationMs - move.elapsedMs);
     const consumedMs = Math.min(deltaMs, remainingMs);
-    move.elapsedMs += consumedMs;
-
-    const progress =
-      move.durationMs === 0 ? 1 : move.elapsedMs / move.durationMs;
-    const nextAngle =
+    const targetElapsedMs = move.elapsedMs + consumedMs;
+    const targetProgress =
+      move.durationMs === 0 ? 1 : targetElapsedMs / move.durationMs;
+    const targetAngle =
       move.startAngleDeg +
-      (move.targetAngleDeg - move.startAngleDeg) * progress;
-    this.jointAngles[move.jointId] = nextAngle;
+      (move.targetAngleDeg - move.startAngleDeg) * targetProgress;
+    const blockedCollision = this.advanceAngleWithConstraint(
+      move.jointId,
+      this.jointAngles[move.jointId],
+      targetAngle,
+    );
 
+    if (blockedCollision) {
+      const safeProgress =
+        move.durationMs === 0
+          ? 1
+          : (blockedCollision.safeAngleDeg - move.startAngleDeg) /
+            (move.targetAngleDeg - move.startAngleDeg);
+      const safeElapsedMs =
+        move.durationMs *
+        Math.min(1, Math.max(0, safeProgress));
+      const safeConsumedMs = Math.max(
+        0,
+        safeElapsedMs - move.elapsedMs,
+      );
+      move.elapsedMs = safeElapsedMs;
+      const currentEndEffector = this.getPose().endEffector;
+
+      return {
+        consumedMs: safeConsumedMs,
+        completed: false,
+        moved: !pointsEqual(
+          previousEndEffector,
+          currentEndEffector,
+        ),
+        previousEndEffector,
+        currentEndEffector,
+        blockedCollision,
+      };
+    }
+
+    move.elapsedMs = targetElapsedMs;
     const currentEndEffector = this.getPose().endEffector;
-    const completed = progress >= 1;
+    const completed = targetProgress >= 1;
     if (completed) {
       this.jointAngles[move.jointId] = move.targetAngleDeg;
       this.activeMove = undefined;
@@ -116,6 +165,64 @@ export class RobotController {
 
   hasActiveMove(): boolean {
     return this.activeMove !== undefined;
+  }
+
+  private advanceAngleWithConstraint(
+    jointId: JointId,
+    startAngleDeg: number,
+    targetAngleDeg: number,
+  ): BlockedHeadCollision | undefined {
+    if (!this.poseConstraint) {
+      this.jointAngles[jointId] = targetAngleDeg;
+      return undefined;
+    }
+
+    const deltaAngle = targetAngleDeg - startAngleDeg;
+    const stepCount = Math.max(
+      1,
+      Math.ceil(Math.abs(deltaAngle) / MAX_ANGULAR_STEP_DEG),
+    );
+    let lastSafeAngle = startAngleDeg;
+
+    for (let index = 1; index <= stepCount; index += 1) {
+      const candidateAngle =
+        startAngleDeg + deltaAngle * (index / stepCount);
+      this.jointAngles[jointId] = candidateAngle;
+      const collision = this.poseConstraint(this.getPose());
+
+      if (!collision) {
+        lastSafeAngle = candidateAngle;
+        continue;
+      }
+
+      let safeAngle = lastSafeAngle;
+      let collidingAngle = candidateAngle;
+      let boundaryCollision = collision;
+      for (
+        let iteration = 0;
+        iteration < COLLISION_BISECTION_STEPS;
+        iteration += 1
+      ) {
+        const midpoint = (safeAngle + collidingAngle) / 2;
+        this.jointAngles[jointId] = midpoint;
+        const midpointCollision = this.poseConstraint(this.getPose());
+        if (midpointCollision) {
+          collidingAngle = midpoint;
+          boundaryCollision = midpointCollision;
+        } else {
+          safeAngle = midpoint;
+        }
+      }
+
+      this.jointAngles[jointId] = safeAngle;
+      return {
+        ...boundaryCollision,
+        jointId,
+        safeAngleDeg: safeAngle,
+      };
+    }
+
+    return undefined;
   }
 }
 

@@ -3,6 +3,7 @@ import {
   RobotController,
   type MoveAdvanceResult,
 } from '../robot/RobotController';
+import type { BlockedHeadCollision } from '../robot/headCollision';
 
 interface ActiveWait {
   command: Extract<RobotCommand, { type: 'wait' }>;
@@ -19,6 +20,7 @@ export interface ExecutorAdvanceResult {
   consumedMs: number;
   commandsCompleted: number;
   programCompleted: boolean;
+  blockedCollision?: BlockedHeadCollision;
 }
 
 export class ProgramExecutor {
@@ -55,6 +57,7 @@ export class ProgramExecutor {
     let remainingMs = deltaMs;
     let consumedMs = 0;
     let commandsCompleted = 0;
+    let blockedCollision: BlockedHeadCollision | undefined;
     let safetyCounter = 0;
 
     while (
@@ -90,6 +93,9 @@ export class ProgramExecutor {
         if (movement.moved) {
           hooks.onMovement?.(movement);
         }
+        if (movement.blockedCollision) {
+          blockedCollision = movement.blockedCollision;
+        }
       } else {
         const wait = this.activeWait;
         if (!wait) {
@@ -106,6 +112,10 @@ export class ProgramExecutor {
 
       consumedMs += commandConsumedMs;
       remainingMs = Math.max(0, remainingMs - commandConsumedMs);
+
+      if (blockedCollision) {
+        break;
+      }
 
       if (!commandCompleted) {
         break;
@@ -126,6 +136,7 @@ export class ProgramExecutor {
       consumedMs,
       commandsCompleted,
       programCompleted: this.commandIndex >= this.commands.length,
+      ...(blockedCollision ? { blockedCollision } : {}),
     };
   }
 

@@ -2,6 +2,7 @@ import type { CompiledProgram, RobotCommand } from '../blockly/programTypes';
 import { estimateProgramDuration } from '../scoring/scoring';
 import type { RobotPose } from '../robot/kinematics';
 import { RobotController } from '../robot/RobotController';
+import { findRobotHeadCollision } from '../robot/headCollision';
 import { findSweptVoxelHits } from '../voxel/contactDetection';
 import type {
   Challenge,
@@ -85,7 +86,25 @@ export class SimulationEngine {
     private readonly challenge: Challenge,
     private readonly scoreProvider: ScoreProvider,
   ) {
-    this.robotController = new RobotController(challenge.robotConfig);
+    this.robotController = new RobotController(
+      challenge.robotConfig,
+      (pose) =>
+        findRobotHeadCollision(
+          pose,
+          challenge.voxelConfig,
+          challenge.robotConfig.geometry,
+        ),
+    );
+    const initialCollision = findRobotHeadCollision(
+      this.robotController.getPose(),
+      challenge.voxelConfig,
+      challenge.robotConfig.geometry,
+    );
+    if (initialCollision) {
+      throw new Error(
+        `Challenge 初始姿态与头部碰撞：${initialCollision.partLabel}。`,
+      );
+    }
     this.executor = new ProgramExecutor(this.robotController);
     this.hairVoxels = new Set(challenge.initialHair.voxels);
     this.addLog('system', `Challenge "${challenge.name}" 已加载。`);
@@ -188,6 +207,19 @@ export class SimulationEngine {
 
       this.simulationTimeMs += result.consumedMs;
       this.snapshotElapsedMs += result.consumedMs;
+
+      if (result.blockedCollision) {
+        const collision = result.blockedCollision;
+        const sourceBlockId =
+          this.executor.getCurrentCommand()?.sourceBlockId;
+        this.fail(
+          new Error(
+            `${collision.partLabel}将接触头部；关节 ${collision.jointId} 已停在安全角度 ${collision.safeAngleDeg.toFixed(2)}°；源积木 ${sourceBlockId ?? '未知'}。`,
+          ),
+          sourceBlockId,
+        );
+        return;
+      }
 
       if (result.programCompleted) {
         this.completeProgram();
@@ -353,12 +385,12 @@ export class SimulationEngine {
       });
   }
 
-  private fail(error: unknown): void {
+  private fail(error: unknown, blockId?: string): void {
     const message =
       error instanceof Error ? error.message : '未知仿真错误。';
     this.status = 'error';
     this.errorMessage = message;
-    this.addLog('error', message);
+    this.addLog('error', message, blockId);
     this.publish();
   }
 

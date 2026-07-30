@@ -7,6 +7,10 @@ import {
   computeRobotPose,
   createInitialJointAngles,
 } from '../../src/features/robot/kinematics';
+import {
+  findRobotHeadCollision,
+  segmentIntersectsExpandedEllipsoid,
+} from '../../src/features/robot/headCollision';
 import { SimulationEngine } from '../../src/features/simulation/SimulationEngine';
 import { clampFrameDeltaMs } from '../../src/features/simulation/frameTiming';
 import {
@@ -42,6 +46,7 @@ describe('robot kinematics', () => {
   it('computes the known zero-angle planar pose', () => {
     const angles = {
       baseYaw: 0,
+      shoulderRoll: 0,
       shoulder: 0,
       elbow: 0,
       wrist: 0,
@@ -60,6 +65,7 @@ describe('robot kinematics', () => {
   it('rotates the whole planar chain around the Y axis', () => {
     const pose = computeRobotPose(defaultChallenge.robotConfig, {
       baseYaw: 60,
+      shoulderRoll: 0,
       shoulder: 0,
       elbow: 0,
       wrist: 0,
@@ -67,6 +73,27 @@ describe('robot kinematics', () => {
 
     expect(pose.endEffector[0]).toBeCloseTo(1.15);
     expect(pose.endEffector[2]).toBeCloseTo(-1.9919, 3);
+  });
+
+  it('moves the planar chain out of plane with shoulder roll', () => {
+    const neutral = computeRobotPose(defaultChallenge.robotConfig, {
+      baseYaw: 0,
+      shoulderRoll: 0,
+      shoulder: 45,
+      elbow: 0,
+      wrist: 0,
+    });
+    const rolled = computeRobotPose(defaultChallenge.robotConfig, {
+      baseYaw: 0,
+      shoulderRoll: 30,
+      shoulder: 45,
+      elbow: 0,
+      wrist: 0,
+    });
+
+    expect(neutral.endEffector[2]).toBeCloseTo(0);
+    expect(Math.abs(rolled.endEffector[2])).toBeGreaterThan(0.5);
+    expect(rolled.endEffector).not.toEqual(neutral.endEffector);
   });
 });
 
@@ -144,6 +171,77 @@ describe('continuous voxel contact', () => {
   });
 });
 
+describe('head collision geometry', () => {
+  const center: Vec3Tuple = [0, 0, 0];
+  const scale: Vec3Tuple = [1, 1, 1];
+
+  it('detects crossing, tangent and interior segments', () => {
+    expect(
+      segmentIntersectsExpandedEllipsoid(
+        [-2, 0, 0],
+        [2, 0, 0],
+        center,
+        scale,
+        0,
+      ),
+    ).toBe(true);
+    expect(
+      segmentIntersectsExpandedEllipsoid(
+        [-2, 1, 0],
+        [2, 1, 0],
+        center,
+        scale,
+        0,
+      ),
+    ).toBe(true);
+    expect(
+      segmentIntersectsExpandedEllipsoid(
+        [0, 0, 0],
+        [0, 0, 0],
+        center,
+        scale,
+        0,
+      ),
+    ).toBe(true);
+  });
+
+  it('keeps segments outside the expanded ellipsoid clear', () => {
+    expect(
+      segmentIntersectsExpandedEllipsoid(
+        [-2, 1.01, 0],
+        [2, 1.01, 0],
+        center,
+        scale,
+        0,
+      ),
+    ).toBe(false);
+    expect(
+      segmentIntersectsExpandedEllipsoid(
+        [1.2, 0, 0],
+        [1.2, 0, 0],
+        center,
+        scale,
+        0.25,
+      ),
+    ).toBe(true);
+  });
+
+  it('keeps the default initial five-joint pose clear', () => {
+    const pose = computeRobotPose(
+      defaultChallenge.robotConfig,
+      createInitialJointAngles(defaultChallenge.robotConfig),
+    );
+
+    expect(
+      findRobotHeadCollision(
+        pose,
+        defaultChallenge.voxelConfig,
+        defaultChallenge.robotConfig.geometry,
+      ),
+    ).toBeUndefined();
+  });
+});
+
 describe('SimulationEngine', () => {
   it('executes the default starter program through the full engine', async () => {
     const workspace = createHeadlessWorkspace(defaultChallenge);
@@ -161,8 +259,9 @@ describe('SimulationEngine', () => {
     }
     const score = await engine.waitForScore();
 
+    expect(engine.getSnapshot().errorMessage).toBeUndefined();
     expect(engine.getSnapshot().status).toBe('completed');
-    expect(engine.getSnapshot().metrics.executedCommandCount).toBe(10);
+    expect(engine.getSnapshot().metrics.executedCommandCount).toBe(5);
     expect(engine.getSnapshot().metrics.estimatedDurationMs).toBeGreaterThan(
       0,
     );
@@ -173,6 +272,74 @@ describe('SimulationEngine', () => {
     expect(score?.completionScore).toBeGreaterThanOrEqual(80);
 
     workspace.dispose();
+  });
+
+  it('stops a colliding command at the last safe pose without scoring', async () => {
+    const compiled = createUnsafeHeadCollisionProgram();
+    const engine = new SimulationEngine(
+      defaultChallenge,
+      new LocalScoreProvider(),
+    );
+
+    engine.run(compiled);
+    engine.tick(10_000);
+    const snapshot = engine.getSnapshot();
+
+    expect(snapshot.status).toBe('error');
+    expect(snapshot.errorMessage).toContain('baseYaw');
+    expect(snapshot.errorMessage).toContain('unsafe-base');
+    expect(snapshot.currentBlockId).toBe('unsafe-base');
+    expect(snapshot.metrics.executedCommandCount).toBe(3);
+    expect(snapshot.scoreResult).toBeUndefined();
+    expect(snapshot.logs.at(-1)?.blockId).toBe('unsafe-base');
+    expect(await engine.waitForScore()).toBeUndefined();
+    expect(
+      findRobotHeadCollision(
+        engine.getPose(),
+        defaultChallenge.voxelConfig,
+        defaultChallenge.robotConfig.geometry,
+      ),
+    ).toBeUndefined();
+
+    engine.reset();
+    expect(engine.getSnapshot().status).toBe('idle');
+    expect(engine.getSnapshot().jointAngles).toEqual(
+      createInitialJointAngles(defaultChallenge.robotConfig),
+    );
+  });
+
+  it('finds the same safe collision boundary for small and large frames', () => {
+    const compiled = createUnsafeHeadCollisionProgram();
+    const smallFrameEngine = new SimulationEngine(
+      defaultChallenge,
+      new LocalScoreProvider(),
+    );
+    const largeFrameEngine = new SimulationEngine(
+      defaultChallenge,
+      new LocalScoreProvider(),
+    );
+
+    smallFrameEngine.run(compiled);
+    let ticks = 0;
+    while (
+      smallFrameEngine.getSnapshot().status === 'running' &&
+      ticks < 5_000
+    ) {
+      smallFrameEngine.tick(8);
+      ticks += 1;
+    }
+
+    largeFrameEngine.run(compiled);
+    largeFrameEngine.tick(10_000);
+
+    expect(smallFrameEngine.getSnapshot().status).toBe('error');
+    expect(largeFrameEngine.getSnapshot().status).toBe('error');
+    expect(
+      smallFrameEngine.getSnapshot().jointAngles.baseYaw,
+    ).toBeCloseTo(
+      largeFrameEngine.getSnapshot().jointAngles.baseYaw,
+      4,
+    );
   });
 
   it('runs to completion, removes swept hair and returns a score', async () => {
@@ -346,5 +513,23 @@ function setJointCommand(
     jointId,
     angleDeg,
     sourceBlockId,
+  };
+}
+
+function createUnsafeHeadCollisionProgram(): CompiledProgram {
+  const commands: RobotCommand[] = [
+    setJointCommand('shoulder', 50, 'unsafe-shoulder'),
+    setJointCommand('elbow', -15, 'unsafe-elbow'),
+    setJointCommand('wrist', -30, 'unsafe-wrist'),
+    setJointCommand('baseYaw', -24, 'unsafe-base'),
+  ];
+
+  return {
+    program: {
+      nodes: commands,
+      sourceBlockCount: commands.length,
+    },
+    runtimeCommands: commands,
+    executedCommandCount: commands.length,
   };
 }

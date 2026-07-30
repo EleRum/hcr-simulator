@@ -6,6 +6,11 @@ import type {
 } from '../types/domain';
 import { validateScoringConfig } from '../features/scoring/scoring';
 import { coordToKey } from '../features/voxel/voxelKey';
+import {
+  computeRobotPose,
+  createInitialJointAngles,
+} from '../features/robot/kinematics';
+import { findRobotHeadCollision } from '../features/robot/headCollision';
 
 const ALLOWED_BLOCKS = new Set<AllowedBlockType>([
   'set-joint-angle',
@@ -40,9 +45,20 @@ export function validateChallengeDefinition(
     jointIds.add(joint.id);
   }
 
-  const geometryValues = Object.entries(definition.robotConfig.geometry)
-    .filter(([key]) => key !== 'basePosition')
-    .map(([, value]) => value);
+  const { geometry } = definition.robotConfig;
+  if (!geometry.collision) {
+    fail('Robot collision geometry is required.');
+  }
+  const geometryValues = [
+    geometry.shoulderHeight,
+    geometry.upperArmLength,
+    geometry.forearmLength,
+    geometry.toolLength,
+    geometry.toolRadius,
+    geometry.collision.linkRadius,
+    geometry.collision.jointRadius,
+    geometry.collision.toolShaftRadius,
+  ];
   if (
     geometryValues.some(
       (value) => typeof value !== 'number' || !Number.isFinite(value) || value <= 0,
@@ -50,12 +66,42 @@ export function validateChallengeDefinition(
   ) {
     fail('Robot geometry lengths and radius must be greater than 0.');
   }
+  if (
+    !Number.isFinite(geometry.collision.headClearance) ||
+    geometry.collision.headClearance < 0
+  ) {
+    fail('Robot head clearance must be a finite non-negative number.');
+  }
 
   if (
     !Number.isFinite(definition.voxelConfig.size) ||
     definition.voxelConfig.size <= 0
   ) {
     fail('Voxel size must be greater than 0.');
+  }
+  validateVector(geometry.basePosition, 'Robot base position');
+  validateVector(definition.voxelConfig.origin, 'Voxel origin');
+  validateVector(definition.voxelConfig.headCenter, 'Head center');
+  if (
+    definition.voxelConfig.headScale.some(
+      (value) => !Number.isFinite(value) || value <= 0,
+    )
+  ) {
+    fail('Head scale axes must be finite numbers greater than 0.');
+  }
+
+  const initialCollision = findRobotHeadCollision(
+    computeRobotPose(
+      definition.robotConfig,
+      createInitialJointAngles(definition.robotConfig),
+    ),
+    definition.voxelConfig,
+    definition.robotConfig.geometry,
+  );
+  if (initialCollision) {
+    fail(
+      `Initial robot pose collides with the head at "${initialCollision.part}".`,
+    );
   }
 
   validateVoxelDefinition(definition.initialHair.voxels, 'Initial hair');
@@ -143,6 +189,18 @@ function validateVoxelDefinition(
 function assertNonEmpty(value: string, label: string): void {
   if (value.trim().length === 0) {
     fail(`${label} must not be empty.`);
+  }
+}
+
+function validateVector(
+  value: readonly number[],
+  label: string,
+): void {
+  if (
+    value.length !== 3 ||
+    value.some((component) => !Number.isFinite(component))
+  ) {
+    fail(`${label} must contain three finite numbers.`);
   }
 }
 

@@ -1,6 +1,6 @@
 # HCR Simulator
 
-HCR Simulator 计划实现为一个纯前端 Web 3D 编程 Demo。用户使用 Blockly 编排舵机角度指令，驱动虚拟四关节机械臂；机械臂末端接触 Hair Voxel 时完成剪除，系统随后按目标发型完成度、程序效率和估算执行时间给出成绩。
+HCR Simulator 是一个纯前端 Web 3D 编程 Demo。用户使用 Blockly 编排舵机角度指令，驱动虚拟五关节机械臂；机械臂末端接触 Hair Voxel 时完成剪除，整套机械装置由确定性几何约束阻止进入头部，系统随后按目标发型完成度、程序效率和估算执行时间给出成绩。
 
 > **当前状态：Phase 1–6 已完成，纯前端 Demo 主闭环可运行；Phase 7 的最终跨浏览器人工验收尚未执行。**
 
@@ -38,7 +38,9 @@ Score Breakdown / Result
 
 - React + TypeScript + Vite + React Three Fiber / Three.js + Blockly。
 - 一个“厚帽型 → 对称整齐短发”的本地 Challenge。
-- 程序化四关节机械臂、头部与 Hair Voxel。
+- 程序化五关节机械臂、不可穿透头部与 Hair Voxel。
+- `baseYaw → shoulderRoll → shoulder → elbow → wrist` 三维旋转链。
+- 碰头时停在最后安全姿态、定位源积木并进入可恢复的错误状态。
 - Run、Pause、Resume、Step、Stop、Reset 和当前积木高亮。
 - Voxel IoU、程序效率、估算执行时间与加权总分。
 - 面向桌面 Chrome / Edge、最低约 1280×720 的 3D 主视图工作台。
@@ -46,7 +48,7 @@ Score Breakdown / Result
 ## Demo 操作流程
 
 1. 启动应用后等待本地 Challenge 与预置 Blockly 程序加载完成。
-2. 可直接运行示例程序，也可在左侧调整关节绝对角度、Wait 与 Repeat 积木。
+2. 可直接运行含非零 `shoulderRoll` 的安全示例程序，也可在左侧调整关节绝对角度、Wait 与 Repeat 积木。
 3. 点击“运行”从 Challenge 初始状态执行；运行中可暂停、继续或停止。
 4. 在空闲或暂停状态点击“单步”，每次完整执行一条原子命令。
 5. 右侧查看关节、末端位置、voxel、命令数和评分；底部日志记录关键事件。
@@ -78,5 +80,5 @@ npm run test:e2e
 
 - 后端、账户、工作区持久化或网络运行前提。
 - 真实 ESP / 舵机、MQTT、WebSerial 或 WebBluetooth。
-- IK、完整物理引擎、真实发丝或剪刀开合。
+- IK、完整物理引擎、机械臂自碰撞、真实发丝或剪刀开合。
 - 多人竞赛、移动端专项适配或生产部署。

@@ -23,6 +23,7 @@ export function RobotModel({
   activeJointId,
 }: RobotModelProps) {
   const baseYawRef = useRef<Group>(null);
+  const shoulderRollRef = useRef<Group>(null);
   const shoulderRef = useRef<Group>(null);
   const elbowRef = useRef<Group>(null);
   const wristRef = useRef<Group>(null);
@@ -34,6 +35,11 @@ export function RobotModel({
 
     if (baseYawRef.current) {
       baseYawRef.current.rotation.y = MathUtils.degToRad(angles.baseYaw);
+    }
+    if (shoulderRollRef.current) {
+      shoulderRollRef.current.rotation.x = MathUtils.degToRad(
+        angles.shoulderRoll,
+      );
     }
     if (shoulderRef.current) {
       shoulderRef.current.rotation.z = MathUtils.degToRad(
@@ -69,35 +75,58 @@ export function RobotModel({
           active={activeJointId === 'baseYaw'}
           scale={0.18}
         />
-        <group ref={shoulderRef}>
-          <Joint
-            active={activeJointId === 'shoulder'}
-            scale={0.16}
+        <group ref={shoulderRollRef}>
+          <ShoulderRollJoint
+            active={activeJointId === 'shoulderRoll'}
           />
-          <Link length={geometry.upperArmLength} />
-          <group
-            ref={elbowRef}
-            position={[geometry.upperArmLength, 0, 0]}
-          >
+          <group ref={shoulderRef}>
             <Joint
-              active={activeJointId === 'elbow'}
-              scale={0.15}
+              active={activeJointId === 'shoulder'}
+              scale={0.13}
             />
-            <Link length={geometry.forearmLength} />
+            <Link length={geometry.upperArmLength} />
             <group
-              ref={wristRef}
-              position={[geometry.forearmLength, 0, 0]}
+              ref={elbowRef}
+              position={[geometry.upperArmLength, 0, 0]}
             >
               <Joint
-                active={activeJointId === 'wrist'}
-                scale={0.13}
+                active={activeJointId === 'elbow'}
+                scale={0.15}
               />
-              <Tool length={geometry.toolLength} radius={geometry.toolRadius} />
+              <Link length={geometry.forearmLength} />
+              <group
+                ref={wristRef}
+                position={[geometry.forearmLength, 0, 0]}
+              >
+                <Joint
+                  active={activeJointId === 'wrist'}
+                  scale={0.13}
+                />
+                <Tool
+                  length={geometry.toolLength}
+                  radius={geometry.toolRadius}
+                />
+              </group>
             </group>
           </group>
         </group>
       </group>
     </group>
+  );
+}
+
+function ShoulderRollJoint({ active }: { active: boolean }) {
+  return (
+    <mesh castShadow rotation={[0, Math.PI / 2, 0]}>
+      <torusGeometry args={[0.2, 0.045, 12, 28]} />
+      <meshStandardMaterial
+        color={active ? COLORS.activeJoint : COLORS.joint}
+        emissive={active ? COLORS.activeJoint : '#000000'}
+        emissiveIntensity={active ? 0.22 : 0}
+        metalness={0.36}
+        roughness={0.3}
+      />
+    </mesh>
   );
 }
 

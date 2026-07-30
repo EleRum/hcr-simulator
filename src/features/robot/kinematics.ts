@@ -8,6 +8,7 @@ import type {
 export interface RobotPose {
   base: Vec3Tuple;
   shoulder: Vec3Tuple;
+  shoulderRoll: Vec3Tuple;
   elbow: Vec3Tuple;
   wrist: Vec3Tuple;
   toolBase: Vec3Tuple;
@@ -21,13 +22,14 @@ export function computeRobotPose(
 ): RobotPose {
   const { geometry } = robotConfig;
   const baseYaw = degreesToRadians(readAngle(jointAngles, 'baseYaw'));
+  const shoulderRollAngle = degreesToRadians(
+    readAngle(jointAngles, 'shoulderRoll'),
+  );
   const shoulderAngle = degreesToRadians(
     readAngle(jointAngles, 'shoulder'),
   );
-  const elbowAngle =
-    shoulderAngle + degreesToRadians(readAngle(jointAngles, 'elbow'));
-  const wristAngle =
-    elbowAngle + degreesToRadians(readAngle(jointAngles, 'wrist'));
+  const elbowAngle = degreesToRadians(readAngle(jointAngles, 'elbow'));
+  const wristAngle = degreesToRadians(readAngle(jointAngles, 'wrist'));
 
   const base = geometry.basePosition;
   const shoulder: Vec3Tuple = [
@@ -35,35 +37,52 @@ export function computeRobotPose(
     base[1] + geometry.shoulderHeight,
     base[2],
   ];
-  const elbow = addPlanarLink(
+  const shoulderRoll = shoulder;
+  const baseRotation = rotationY(baseYaw);
+  const rollRotation = multiplyMatrices(
+    baseRotation,
+    rotationX(shoulderRollAngle),
+  );
+  const shoulderRotation = multiplyMatrices(
+    rollRotation,
+    rotationZ(shoulderAngle),
+  );
+  const elbow = addTransformedLink(
     shoulder,
     geometry.upperArmLength,
-    shoulderAngle,
-    baseYaw,
+    shoulderRotation,
   );
-  const wrist = addPlanarLink(
+  const elbowRotation = multiplyMatrices(
+    shoulderRotation,
+    rotationZ(elbowAngle),
+  );
+  const wrist = addTransformedLink(
     elbow,
     geometry.forearmLength,
-    elbowAngle,
-    baseYaw,
+    elbowRotation,
+  );
+  const wristRotation = multiplyMatrices(
+    elbowRotation,
+    rotationZ(wristAngle),
   );
   const toolBase = wrist;
-  const endEffector = addPlanarLink(
+  const endEffector = addTransformedLink(
     toolBase,
     geometry.toolLength,
-    wristAngle,
-    baseYaw,
+    wristRotation,
   );
 
   return {
     base,
     shoulder,
+    shoulderRoll,
     elbow,
     wrist,
     toolBase,
     endEffector,
     jointPositions: {
-      baseYaw: base,
+      baseYaw: shoulder,
+      shoulderRoll,
       shoulder,
       elbow,
       wrist,
@@ -92,18 +111,78 @@ export function linkLengths(
   ];
 }
 
-function addPlanarLink(
+type Matrix3 = readonly [
+  number,
+  number,
+  number,
+  number,
+  number,
+  number,
+  number,
+  number,
+  number,
+];
+
+function addTransformedLink(
   start: Vec3Tuple,
   length: number,
-  planarAngle: number,
-  yaw: number,
+  rotation: Matrix3,
 ): Vec3Tuple {
-  const horizontalLength = Math.cos(planarAngle) * length;
+  const direction = transformDirection(rotation, [length, 0, 0]);
   return [
-    start[0] + Math.cos(yaw) * horizontalLength,
-    start[1] + Math.sin(planarAngle) * length,
-    start[2] - Math.sin(yaw) * horizontalLength,
+    start[0] + direction[0],
+    start[1] + direction[1],
+    start[2] + direction[2],
   ];
+}
+
+function transformDirection(
+  matrix: Matrix3,
+  vector: Vec3Tuple,
+): Vec3Tuple {
+  return [
+    matrix[0] * vector[0] +
+      matrix[1] * vector[1] +
+      matrix[2] * vector[2],
+    matrix[3] * vector[0] +
+      matrix[4] * vector[1] +
+      matrix[5] * vector[2],
+    matrix[6] * vector[0] +
+      matrix[7] * vector[1] +
+      matrix[8] * vector[2],
+  ];
+}
+
+function multiplyMatrices(left: Matrix3, right: Matrix3): Matrix3 {
+  return [
+    left[0] * right[0] + left[1] * right[3] + left[2] * right[6],
+    left[0] * right[1] + left[1] * right[4] + left[2] * right[7],
+    left[0] * right[2] + left[1] * right[5] + left[2] * right[8],
+    left[3] * right[0] + left[4] * right[3] + left[5] * right[6],
+    left[3] * right[1] + left[4] * right[4] + left[5] * right[7],
+    left[3] * right[2] + left[4] * right[5] + left[5] * right[8],
+    left[6] * right[0] + left[7] * right[3] + left[8] * right[6],
+    left[6] * right[1] + left[7] * right[4] + left[8] * right[7],
+    left[6] * right[2] + left[7] * right[5] + left[8] * right[8],
+  ];
+}
+
+function rotationX(angle: number): Matrix3 {
+  const cosine = Math.cos(angle);
+  const sine = Math.sin(angle);
+  return [1, 0, 0, 0, cosine, -sine, 0, sine, cosine];
+}
+
+function rotationY(angle: number): Matrix3 {
+  const cosine = Math.cos(angle);
+  const sine = Math.sin(angle);
+  return [cosine, 0, sine, 0, 1, 0, -sine, 0, cosine];
+}
+
+function rotationZ(angle: number): Matrix3 {
+  const cosine = Math.cos(angle);
+  const sine = Math.sin(angle);
+  return [cosine, -sine, 0, sine, cosine, 0, 0, 0, 1];
 }
 
 function readAngle(

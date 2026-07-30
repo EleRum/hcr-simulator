@@ -46,6 +46,9 @@ function normalizeChallenge(definition: ChallengeDefinition): Challenge {
       geometry: {
         ...definition.robotConfig.geometry,
         basePosition: [...definition.robotConfig.geometry.basePosition],
+        collision: {
+          ...definition.robotConfig.geometry.collision,
+        },
       },
     },
     voxelConfig: {
