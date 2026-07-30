@@ -84,12 +84,12 @@ tests/
 
 ### Phase 2 — 领域模型、Challenge 与评分
 
-- [ ] 实现 v0.3 中的 domain types、VoxelKey 转换和配置校验。
-- [ ] 实现确定性目标短发生成器和初始厚帽型生成器。
-- [ ] 建立唯一 Challenge Definition、机械臂配置和示例 Workspace 数据。
-- [ ] 实现 ChallengeProvider / ScoreProvider 接口与 Local 实现。
-- [ ] 实现 IoU、Program Cost、时间估算和加权评分。
-- [ ] 覆盖集合不变量、Provider 与评分边界单测。
+- [x] 实现 v0.3 中的 domain types、VoxelKey 转换和配置校验。
+- [x] 实现确定性目标短发生成器和初始厚帽型生成器。
+- [x] 建立唯一 Challenge Definition、机械臂配置和示例 Workspace 数据。
+- [x] 实现 ChallengeProvider / ScoreProvider 接口与 Local 实现。
+- [x] 实现 IoU、Program Cost、时间估算和加权评分。
+- [x] 覆盖集合不变量、Provider 与评分边界单测。
 
 阶段出口：不依赖 React 或 Three.js 即可加载 Challenge 并得到确定性评分。
 
