@@ -1,5 +1,6 @@
 import { generateDefaultHairstyles } from '../../features/voxel/hairGenerator';
 import type { ChallengeDefinition } from '../../types/domain';
+import { starterWorkspaceState } from './starterWorkspace';
 
 const { initialHair, targetHair } = generateDefaultHairstyles();
 
@@ -67,12 +68,7 @@ export const defaultChallengeDefinition: ChallengeDefinition = {
   initialHair,
   targetHair,
   allowedBlocks: ['set-joint-angle', 'wait', 'repeat'],
-  starterWorkspace: {
-    blocks: {
-      languageVersion: 0,
-      blocks: [],
-    },
-  },
+  starterWorkspace: starterWorkspaceState,
   scoring: {
     weights: {
       completion: 0.6,

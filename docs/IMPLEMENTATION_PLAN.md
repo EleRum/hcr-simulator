@@ -95,12 +95,12 @@ tests/
 
 ### Phase 3 — Blockly 与 Program IR
 
-- [ ] 注册绝对关节、Wait 和 Repeat 积木。
-- [ ] 根据 Challenge 动态建立关节下拉框、角度验证和工具箱。
-- [ ] 实现预置 Workspace 的反序列化。
-- [ ] 实现单顶层栈校验和结构化 Program IR 编译。
-- [ ] 实现 Repeat 展开、500 原子命令限制和 Source Block ID 保留。
-- [ ] 覆盖空程序、多顶层、字段越界、嵌套 Repeat 和计数规则单测。
+- [x] 注册绝对关节、Wait 和 Repeat 积木。
+- [x] 根据 Challenge 动态建立关节下拉框、角度验证和工具箱。
+- [x] 实现预置 Workspace 的反序列化。
+- [x] 实现单顶层栈校验和结构化 Program IR 编译。
+- [x] 实现 Repeat 展开、500 原子命令限制和 Source Block ID 保留。
+- [x] 覆盖空程序、多顶层、字段越界、嵌套 Repeat 和计数规则单测。
 
 阶段出口：示例 Workspace 可编译为稳定、可检查的 Runtime Command 列表，不执行动态 JavaScript。
 
