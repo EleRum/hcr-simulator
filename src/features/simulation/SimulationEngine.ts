@@ -4,6 +4,7 @@ import type { RobotPose } from '../robot/kinematics';
 import { RobotController } from '../robot/RobotController';
 import { findRobotHeadCollision } from '../robot/headCollision';
 import { findSweptVoxelHits } from '../voxel/contactDetection';
+import { cardStore, cutAtPoint } from '../card/cardStore';
 import type {
   Challenge,
   JointId,
@@ -334,6 +335,16 @@ export class SimulationEngine {
   }
 
   private handleMovement(start: Vec3Tuple, end: Vec3Tuple): void {
+    // Card hair cutting (hcr_s4 mode — when cardStore has loaded pieces)
+    if (cardStore.pieces.length > 0) {
+      const cutCount = cutAtPoint(end, this.challenge.robotConfig.geometry.toolRadius * 2);
+      if (cutCount > 0) {
+        this.addLog('collision', `[CARD] 剪除 ${cutCount} 个发片顶点。`);
+      }
+      return;
+    }
+
+    // Voxel hair cutting (original mode)
     const hits = findSweptVoxelHits(
       start,
       end,

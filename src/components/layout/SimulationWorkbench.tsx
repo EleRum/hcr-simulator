@@ -8,6 +8,7 @@ import {
   PanelLeftOpen,
   PanelRightClose,
   PanelRightOpen,
+  ScanFace,
 } from 'lucide-react';
 import type { Challenge } from '../../types/domain';
 import {
@@ -43,10 +44,12 @@ export function SimulationWorkbench({
     rightPanelOpen,
     logOpen,
     showTarget,
+    realisticHead,
     toggleLeftPanel,
     toggleRightPanel,
     toggleLog,
     toggleTarget,
+    toggleRealisticHead,
   } = useWorkbenchStore();
   const editorLocked =
     snapshot.status === 'running' || snapshot.status === 'paused';
@@ -126,6 +129,16 @@ export function SimulationWorkbench({
           </span>
           <button
             type="button"
+            onClick={toggleRealisticHead}
+            className={realisticHead ? 'is-active' : ''}
+            aria-label={realisticHead ? '切换简笔头模' : '切换真人头模'}
+            aria-pressed={realisticHead}
+            title={realisticHead ? '显示简笔球头' : '显示真人头模 (hcr_s4)'}
+          >
+            <ScanFace size={17} />
+          </button>
+          <button
+            type="button"
             onClick={toggleLeftPanel}
             aria-label={leftPanelOpen ? '收起程序面板' : '展开程序面板'}
             aria-pressed={leftPanelOpen}
@@ -152,7 +165,7 @@ export function SimulationWorkbench({
       </header>
 
       <section className="stage">
-        <SimulatorCanvas engine={engine} showTarget={showTarget} />
+        <SimulatorCanvas engine={engine} showTarget={showTarget} realisticHead={realisticHead} />
 
         <aside
           className={`side-panel side-panel--left ${

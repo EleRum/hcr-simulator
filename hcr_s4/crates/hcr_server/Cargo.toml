@@ -1,0 +1,15 @@
+[package]
+name = "hcr_server"
+version = "0.1.0"
+edition = "2024"
+description = "Optional hotaru HTTP + MQTT bridge for hcr_core"
+
+[[bin]]
+name = "hcr_server"
+path = "src/main.rs"
+
+[dependencies]
+hcr_core = { path = "../hcr_core", features = ["snapshot"] }
+hotaru = { path = "../../../hotaru/hotaru", version = "=0.8.4", features = ["trans", "http", "template"] }
+serde_json = "1"
+tokio = { version = "1", features = ["full"] }

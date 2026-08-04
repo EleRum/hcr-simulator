@@ -13,11 +13,14 @@ import { useSimulationSnapshot } from './useSimulationSnapshot';
 import { SimulationTicker } from './SimulationTicker';
 import { RobotModel } from '../robot/RobotModel';
 import { VoxelHair } from '../voxel/VoxelHair';
+import { RealisticHead } from '../head/RealisticHead';
+import { CardHair } from '../card/CardHair';
 import { supportsWebGL } from './webglSupport';
 
 interface SimulatorCanvasProps {
   engine: SimulationEngine;
   showTarget: boolean;
+  realisticHead?: boolean;
 }
 
 export type SceneRenderState =
@@ -28,6 +31,7 @@ export type SceneRenderState =
 export function SimulatorCanvas({
   engine,
   showTarget,
+  realisticHead = false,
 }: SimulatorCanvasProps) {
   const [webglSupported] = useState(supportsWebGL);
   const [renderState, setRenderState] =
@@ -99,7 +103,7 @@ export function SimulatorCanvas({
           onContextLost={handleContextLost}
           onContextRestored={reinitializeCanvas}
         />
-        <SimulatorScene engine={engine} showTarget={showTarget} />
+        <SimulatorScene engine={engine} showTarget={showTarget} realisticHead={realisticHead} />
       </Canvas>
       {renderState !== 'ready' ? (
         <div
@@ -130,10 +134,17 @@ export function SimulatorCanvas({
   );
 }
 
+interface SimulatorSceneProps {
+  engine: SimulationEngine;
+  showTarget: boolean;
+  realisticHead?: boolean;
+}
+
 function SimulatorScene({
   engine,
   showTarget,
-}: SimulatorCanvasProps) {
+  realisticHead = false,
+}: SimulatorSceneProps) {
   const snapshot = useSimulationSnapshot(engine);
   const challenge = engine.getChallenge();
 
@@ -164,18 +175,27 @@ function SimulatorScene({
       <Head
         center={challenge.voxelConfig.headCenter}
         scale={challenge.voxelConfig.headScale}
+        visible={!realisticHead}
       />
-      <VoxelHair
-        voxels={snapshot.hairVoxels}
-        voxelConfig={challenge.voxelConfig}
+      <RealisticHead
+        center={challenge.voxelConfig.realisticHeadCenter}
+        scale={challenge.voxelConfig.realisticHeadScale[0]}
+        visible={realisticHead}
       />
-      {showTarget ? (
+      {!realisticHead && (
+        <VoxelHair
+          voxels={snapshot.hairVoxels}
+          voxelConfig={challenge.voxelConfig}
+        />
+      )}
+      {!realisticHead && showTarget ? (
         <VoxelHair
           voxels={challenge.targetHair.voxels}
           voxelConfig={challenge.voxelConfig}
           variant="target"
         />
       ) : null}
+      {realisticHead && <CardHair center={challenge.voxelConfig.cardHairCenter} scale={challenge.voxelConfig.cardHairScale} />}
 
       <gridHelper
         args={[12, 48, '#294454', '#172b37']}
@@ -237,12 +257,14 @@ function WebGLContextGuard({
 function Head({
   center,
   scale,
+  visible = true,
 }: {
   center: readonly [number, number, number];
   scale: readonly [number, number, number];
+  visible?: boolean;
 }) {
   return (
-    <group position={center}>
+    <group position={center} visible={visible}>
       <mesh castShadow receiveShadow scale={scale}>
         <sphereGeometry args={[1, 24, 18]} />
         <meshStandardMaterial color="#d2a184" roughness={0.82} />

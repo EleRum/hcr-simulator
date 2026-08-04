@@ -82,6 +82,10 @@ export interface ChallengeDefinition {
     size: number;
     headCenter: Vec3Tuple;
     headScale: Vec3Tuple;
+    realisticHeadCenter: Vec3Tuple;
+    realisticHeadScale: Vec3Tuple;
+    cardHairCenter: Vec3Tuple;
+    cardHairScale: Vec3Tuple;
   };
   initialHair: HairstyleDefinition;
   targetHair: HairstyleDefinition;

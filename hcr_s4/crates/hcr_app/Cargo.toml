@@ -1,0 +1,12 @@
+[package]
+name = "hcr_app"
+version = "0.1.0"
+edition = "2024"
+description = "Bevy desktop app — Blender hair cards + PBD over head mesh"
+
+[dependencies]
+bevy = "0.17"
+rand = "0.8"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+hcr_core = { path = "../hcr_core" }

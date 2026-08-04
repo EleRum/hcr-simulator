@@ -1,8 +1,5 @@
+target/
 node_modules/
 dist/
-coverage/
-playwright-report/
-test-results/
-*.log
-.env
-.env.local
+*.pyc
+__pycache__/
