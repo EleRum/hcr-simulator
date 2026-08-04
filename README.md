@@ -77,4 +77,4 @@ hcr-simulator2/
 | 构建 | Vite 8 |
 | Rust 物理 | Bevy 0.17 + hcr_core PBD |
 
-![alt text](picture\image.png)
+![alt text](picture/image.png)
