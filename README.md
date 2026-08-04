@@ -76,3 +76,5 @@ hcr-simulator2/
 | 状态管理 | Zustand 5 |
 | 构建 | Vite 8 |
 | Rust 物理 | Bevy 0.17 + hcr_core PBD |
+
+![alt text](picture\image.png)
